@@ -1,0 +1,62 @@
+# 2009-11744
+# 심규민
+
+    .pos 0
+init:
+    irmovl stack, %esp
+    irmovl stack, %ebp
+    jmp main
+
+# sample block
+    .align 4
+src:
+    .long 0x00a
+    .long 0x0b0
+    .long 0xc00
+dest:
+    .long 0x111
+    .long 0x222
+    .long 0x333
+
+main:
+    irmovl $3, %eax
+    pushl %eax
+    irmovl dest, %eax
+    pushl %eax
+    irmovl src, %eax
+    pushl %eax
+    call copy_block
+    halt
+
+copy_block:
+    pushl %ebp
+    rrmovl %esp, %ebp
+    pushl %ebx # callee save
+    pushl %esi
+    pushl %edi
+    xorl %eax, %eax # result = 0
+    mrmovl 8(%ebp), %esi # src
+    mrmovl 12(%ebp), %edi # dest
+    mrmovl 16(%ebp), %ecx # len
+copy_loop: # while
+    xorl %ebx, %ebx # 0
+    subl %ebx, %ecx # len - 0
+    jle copy_end # len <= 0
+    irmovl $4, %ebx # for pointer increment
+    mrmovl (%esi), %edx # load val from src
+    addl %ebx, %esi # src++
+    rmmovl %edx, (%edi) # save val to dest
+    addl %ebx, %edi # dest++
+    xorl %edx, %eax # result ^= val
+    irmovl $1, %ebx # for len decrement
+    subl %ebx, %ecx # len--
+    jmp copy_loop
+copy_end:
+    popl %edi # callee restore
+    popl %esi
+    popl %ebx
+    popl %ebp
+    ret
+
+    .pos 0x100
+stack:
