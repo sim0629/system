@@ -1,0 +1,45 @@
+# 2009-11744
+# 심규민
+
+    .pos 0
+init:
+    irmovl stack, %esp
+    irmovl stack, %ebp
+    jmp main
+
+# sample list
+    .align 4
+ele1:
+    .long 0x00a
+    .long ele2
+ele2:
+    .long 0x0b0
+    .long ele3
+ele3:
+    .long 0xc00
+    .long 0
+
+main:
+    irmovl ele1, %eax
+    pushl %eax
+    call sum_list
+    halt
+
+sum_list:
+    pushl %ebp
+    rrmovl %esp, %ebp
+    irmovl $0, %eax # val = 0
+    mrmovl 8(%ebp), %ecx # ls
+sum_loop:
+    andl %ecx, %ecx # while ls
+    je sum_end
+    mrmovl (%ecx), %edx # ls->val
+    addl %edx, %eax
+    mrmovl 4(%ecx), %ecx # ls->next
+    jmp sum_loop
+sum_end:
+    popl %ebp
+    ret
+
+    .pos 0x100
+stack:
