@@ -1,3 +1,6 @@
+# 2009-11744
+# 심규민
+
 #/* $begin seq-all-hcl */
 ####################################################################
 #  HCL Description of Control for Single Cycle Y86 Processor SEQ   #
