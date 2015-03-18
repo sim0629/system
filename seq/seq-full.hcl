@@ -21,6 +21,26 @@
 # PC update
 #   PC <- valP
 
+# LEAVE는 RRMOVL과 POPL이 합쳐진 instruction이다.
+# esp를 ebp의 값으로 복원해주고 former ebp를 stack에서 pop한다.
+# 즉, RRMOVL REBP, RESP; POPL REBP 이다.
+# 따라서 각 단계별 작업은 다음과 같다.
+# Fetch
+#   icode:ifun <- M_1[PC]
+#   valP <- PC+1
+# Decode
+#   valA <- R[%ebp]
+#   valB <- R[%ebp]
+# Execute
+#   valE <- valB + 4
+# Memory
+#   valM <- M_4[valA]
+# Write back
+#   R[%esp] <- valE
+#   R[%ebp] <- valM
+# PC update
+#   PC <- valP
+
 #/* $begin seq-all-hcl */
 ####################################################################
 #  HCL Description of Control for Single Cycle Y86 Processor SEQ   #
