@@ -1,6 +1,26 @@
 # 2009-11744
 # 심규민
 
+# IADDL은 IRMOVL과 ADDL이 합쳐진 instruction이다.
+# IADDL V, rB 형태이며 rB의 값에 V를 더해서 다시 rB에 쓴다.
+# 따라서 각 단계별 작업은 다음과 같다.
+# Fetch
+#   icode:ifun <- M_1[PC]
+#   rA:rB <- M_1[PC+1] // rA는 쓰이지 않음
+#   valC <- M_4[PC+2]
+#   valP <- PC+6
+# Decode
+#   valB <- R[rB]
+# Execute
+#   valE <- valB + valC
+#   Set CC
+# Memory
+#   (nothing)
+# Write back
+#   R[rB] <- valE
+# PC update
+#   PC <- valP
+
 #/* $begin seq-all-hcl */
 ####################################################################
 #  HCL Description of Control for Single Cycle Y86 Processor SEQ   #
