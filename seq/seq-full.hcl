@@ -112,7 +112,7 @@ int ifun = [
 
 bool instr_valid = icode in 
 	{ INOP, IHALT, IRRMOVL, IIRMOVL, IRMMOVL, IMRMOVL,
-	  IIADDL, IOPL, IJXX, ICALL, IRET, IPUSHL, IPOPL };
+	  ILEAVE, IIADDL, IOPL, IJXX, ICALL, IRET, IPUSHL, IPOPL };
 
 # Does fetched instruction require a regid byte?
 bool need_regids =
@@ -129,6 +129,7 @@ bool need_valC =
 int srcA = [
 	icode in { IRRMOVL, IRMMOVL, IOPL, IPUSHL  } : rA;
 	icode in { IPOPL, IRET } : RESP;
+	icode in { ILEAVE } : REBP;
 	1 : RNONE; # Don't need register
 ];
 
@@ -136,6 +137,7 @@ int srcA = [
 int srcB = [
 	icode in { IIADDL, IOPL, IRMMOVL, IMRMOVL  } : rB;
 	icode in { IPUSHL, IPOPL, ICALL, IRET } : RESP;
+	icode in { ILEAVE } : REBP;
 	1 : RNONE;  # Don't need register
 ];
 
@@ -143,13 +145,14 @@ int srcB = [
 int dstE = [
 	icode in { IRRMOVL } && Cnd : rB;
 	icode in { IIADDL, IIRMOVL, IOPL} : rB;
-	icode in { IPUSHL, IPOPL, ICALL, IRET } : RESP;
+	icode in { ILEAVE, IPUSHL, IPOPL, ICALL, IRET } : RESP;
 	1 : RNONE;  # Don't write any register
 ];
 
 ## What register should be used as the M destination?
 int dstM = [
 	icode in { IMRMOVL, IPOPL } : rA;
+	icode in { ILEAVE } : REBP;
 	1 : RNONE;  # Don't write any register
 ];
 
@@ -160,14 +163,14 @@ int aluA = [
 	icode in { IRRMOVL, IOPL } : valA;
 	icode in { IIADDL, IIRMOVL, IRMMOVL, IMRMOVL } : valC;
 	icode in { ICALL, IPUSHL } : -4;
-	icode in { IRET, IPOPL } : 4;
+	icode in { ILEAVE, IRET, IPOPL } : 4;
 	# Other instructions don't need ALU
 ];
 
 ## Select input B to ALU
 int aluB = [
 	icode in { IRMMOVL, IMRMOVL, IOPL, ICALL, 
-	           IIADDL, IPUSHL, IRET, IPOPL } : valB;
+	           ILEAVE, IIADDL, IPUSHL, IRET, IPOPL } : valB;
 	icode in { IRRMOVL, IIRMOVL } : 0;
 	# Other instructions don't need ALU
 ];
@@ -184,7 +187,7 @@ bool set_cc = icode in { IIADDL, IOPL };
 ################ Memory Stage    ###################################
 
 ## Set read control signal
-bool mem_read = icode in { IMRMOVL, IPOPL, IRET };
+bool mem_read = icode in { ILEAVE, IMRMOVL, IPOPL, IRET };
 
 ## Set write control signal
 bool mem_write = icode in { IRMMOVL, IPUSHL, ICALL };
@@ -192,7 +195,7 @@ bool mem_write = icode in { IRMMOVL, IPUSHL, ICALL };
 ## Select memory address
 int mem_addr = [
 	icode in { IRMMOVL, IPUSHL, ICALL, IMRMOVL } : valE;
-	icode in { IPOPL, IRET } : valA;
+	icode in { ILEAVE, IPOPL, IRET } : valA;
 	# Other instructions don't need address
 ];
 
