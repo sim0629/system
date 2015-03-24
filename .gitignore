@@ -1,0 +1,14 @@
+*.o
+*.yo
+/misc/hcl.tab.c
+/misc/hcl.tab.h
+/misc/hcl2c
+/misc/lex.yy.c
+/misc/yas
+/misc/yis
+/pipe/ldriver.ys
+/pipe/pipe-*.c
+/pipe/psim
+/pipe/sdriver.ys
+/seq/seq-*.c
+/seq/ssim
