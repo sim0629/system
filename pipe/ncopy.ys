@@ -23,8 +23,8 @@ ncopy:	pushl %ebp		# Save old frame pointer
 # You can modify this portion
 	# Loop header
 	xorl %eax, %eax		# count = 0;
-	irmovl $0x3, %edi	# 2-bit mask
-	andl %edx, %edi		# set %edi to (len % 4)
+	irmovl $0x7, %edi	# 3-bit mask
+	andl %edx, %edi		# set %edi to (len % 8)
 	je Do			# if 0, goto Do:
 Consume:
 	mrmovl (%ebx), %esi	# otherwise, consume the rest
@@ -38,7 +38,7 @@ Npos0:
 	iaddl $-1, %edi
 	jg Consume
 Do:
-	irmovl $0xFFFFFFFC, %edi
+	irmovl $0xFFFFFFF8, %edi
 	andl %edi, %edx
 	jle Done
 Loop:
@@ -66,9 +66,33 @@ Npos3:
 	jle Npos4		# if so, goto Npos4:
 	iaddl $1, %eax		# count++
 Npos4:
-	iaddl $16, %ebx		# src++ (4 times)
-	iaddl $16, %ecx		# dst++ (4 times)
-	iaddl $-4, %edx		# len-- (4 times); len > 0?
+	mrmovl 16(%ebx), %esi	# read val from src...
+	rmmovl %esi, 16(%ecx)	# ...and store it to dst
+	andl %esi, %esi		# val <= 0?
+	jle Npos5		# if so, goto Npos5:
+	iaddl $1, %eax		# count++
+Npos5:
+	mrmovl 20(%ebx), %esi	# read val from src...
+	rmmovl %esi, 20(%ecx)	# ...and store it to dst
+	andl %esi, %esi		# val <= 0?
+	jle Npos6		# if so, goto Npos6:
+	iaddl $1, %eax		# count++
+Npos6:
+	mrmovl 24(%ebx), %esi	# read val from src...
+	rmmovl %esi, 24(%ecx)	# ...and store it to dst
+	andl %esi, %esi		# val <= 0?
+	jle Npos7		# if so, goto Npos7:
+	iaddl $1, %eax		# count++
+Npos7:
+	mrmovl 28(%ebx), %esi	# read val from src...
+	rmmovl %esi, 28(%ecx)	# ...and store it to dst
+	andl %esi, %esi		# val <= 0?
+	jle Npos8		# if so, goto Npos8:
+	iaddl $1, %eax		# count++
+Npos8:
+	iaddl $32, %ebx		# src++ (8 times)
+	iaddl $32, %ecx		# dst++ (8 times)
+	iaddl $-8, %edx		# len-- (8 times); len > 0?
 	jg Loop			# if so, goto Loop:
 ##################################################################
 # Do not modify the following section of code
