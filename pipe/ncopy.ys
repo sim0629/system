@@ -32,10 +32,9 @@ Loop:
 	jle Npos		# if so, goto Npos:
 	iaddl $1, %eax		# count++
 Npos:
-	iaddl $-1, %edx		# len--
 	iaddl $4, %ebx		# src++
 	iaddl $4, %ecx		# dst++
-	andl %edx,%edx		# len > 0?
+	iaddl $-1, %edx		# len--; len > 0?
 	jg Loop			# if so, goto Loop:
 ##################################################################
 # Do not modify the following section of code
