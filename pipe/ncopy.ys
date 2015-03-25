@@ -23,11 +23,9 @@ ncopy:	pushl %ebp		# Save old frame pointer
 # You can modify this portion
 	# Loop header
 	xorl %eax, %eax		# count = 0;
-	andl %edx, %edx		# len <= 0?
-	jle Done		# if so, goto Done:
 	irmovl $0x3, %edi	# 2-bit mask
 	andl %edx, %edi		# set %edi to (len % 4)
-	je Loop			# if 0, goto Loop:
+	je Do			# if 0, goto Do:
 Consume:
 	mrmovl (%ebx), %esi	# otherwise, consume the rest
 	rmmovl %esi, (%ecx)
@@ -40,6 +38,7 @@ Npos0:
 	iaddl $-1, %edx
 	iaddl $-1, %edi
 	jg Consume
+Do:
 	andl %edx, %edx
 	jle Done
 Loop:
