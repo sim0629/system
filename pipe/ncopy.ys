@@ -25,10 +25,11 @@ ncopy:	pushl %ebp		# Save old frame pointer
 	xorl %eax, %eax		# count = 0;
 	andl %edx, %edx		# len <= 0?
 	jle Done		# if so, goto Done:
-	irmovl $1, %edi
-	andl %edx, %edi		# len is even?
-	je Loop			# if so, goto Loop:
-	mrmovl (%ebx), %esi	# otherwise, consume 1 item
+	irmovl $0x3, %edi	# 2-bit mask
+	andl %edx, %edi		# set %edi to (len % 4)
+	je Loop			# if 0, goto Loop:
+Consume:
+	mrmovl (%ebx), %esi	# otherwise, consume the rest
 	rmmovl %esi, (%ecx)
 	andl %esi, %esi
 	jle Npos0
@@ -37,6 +38,9 @@ Npos0:
 	iaddl $4, %ebx
 	iaddl $4, %ecx
 	iaddl $-1, %edx
+	iaddl $-1, %edi
+	jg Consume
+	andl %edx, %edx
 	jle Done
 Loop:
 	mrmovl (%ebx), %esi	# read val from src...
@@ -51,9 +55,21 @@ Npos1:
 	jle Npos2		# if so, goto Npos2:
 	iaddl $1, %eax		# count++
 Npos2:
-	iaddl $8, %ebx		# src++ (2 times)
-	iaddl $8, %ecx		# dst++ (2 times)
-	iaddl $-2, %edx		# len-- (2 times); len > 0?
+	mrmovl 8(%ebx), %esi	# read val from src...
+	rmmovl %esi, 8(%ecx)	# ...and store it to dst
+	andl %esi, %esi		# val <= 0?
+	jle Npos3		# if so, goto Npos3:
+	iaddl $1, %eax		# count++
+Npos3:
+	mrmovl 12(%ebx), %esi	# read val from src...
+	rmmovl %esi, 12(%ecx)	# ...and store it to dst
+	andl %esi, %esi		# val <= 0?
+	jle Npos4		# if so, goto Npos4:
+	iaddl $1, %eax		# count++
+Npos4:
+	iaddl $16, %ebx		# src++ (4 times)
+	iaddl $16, %ecx		# dst++ (4 times)
+	iaddl $-4, %edx		# len-- (4 times); len > 0?
 	jg Loop			# if so, goto Loop:
 ##################################################################
 # Do not modify the following section of code
