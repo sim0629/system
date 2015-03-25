@@ -22,8 +22,8 @@ ncopy:	pushl %ebp		# Save old frame pointer
 ##################################################################
 # You can modify this portion
 	# Loop header
-	xorl %eax,%eax		# count = 0;
-	andl %edx,%edx		# len <= 0?
+	xorl %eax, %eax		# count = 0;
+	andl %edx, %edx		# len <= 0?
 	jle Done		# if so, goto Done:
 Loop:
 	mrmovl (%ebx), %esi	# read val from src...
