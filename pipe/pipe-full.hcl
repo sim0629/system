@@ -9,6 +9,20 @@
 ## for iaddl (IIADDL) and leave (ILEAVE).
 ## Your job is to add the rest of the logic to make it work
 
+# 2009-11744 심규민
+#
+# 1. IADDL을 구현하였다.
+#   immediate value를 더할 수 있는 instruction이다.
+#   이 instruction을 쓰면, 상수를 register에 옮기고 나서 ADDL 해야할
+#   것을 한 instruction에 처리할 수 있다.
+# 2. Load forwarding을 구현하였다.
+#   앞의 instruction이 MRMOVL(POPL)이고,
+#   뒤의 instruction이 RMMOVL(PUSHL)일 때,
+#   앞의 instruction의 destination register가
+#   뒤의 instruction의 source register와 같으면
+#   write-back stage에서 memory stage로 값을 바로 넘겨줄 수 있다.
+#   이렇게 하면 1 cycle stall을 방지할 수 있다.
+
 ####################################################################
 #    C Include's.  Don't alter these                               #
 ####################################################################
