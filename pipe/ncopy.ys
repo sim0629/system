@@ -3,9 +3,44 @@
 # ncopy.ys - Copy a src block of len ints to dst.
 # Return the number of positive ints (>0) contained in src.
 #
-# Include your name and ID here.
+# 2009-11744 심규민
 #
-# Describe how and why you modified the baseline code.
+# 다음과 같은 순서대로 CPE를 줄여 나갔다.
+#
+# 0. (처음 상태)
+#   Average CPE: 16.44
+#
+# 1. 붙어 있는 irmovl, addl/subl을 iaddl로 대체하였다.
+#   Average CPE: 13.96
+#
+# 2. (pipe-full.hcl에 load forwarding 구현)
+#   Average CPE: 12.96
+#
+# 3. len > 0 조건을 체크하기 위해 andl을 하여 flag를 세팅하게 되어
+#   있었는데, len--를 하고 나서 발생하는 flag를 그대로 이용하여
+#   andl을 하나 줄였다.
+#   Average CPE: 11.96
+#
+# 4. len을 홀짝으로 구분하여 2-step씩 진행하도록 loop를
+#   unrolling을 하였다.
+#   Average CPE: 10.37
+#
+# 5. loop unrolling을 2-step에서 4-step로 늘렸다.
+#   len이 4로 나누어 떨어지지 않을 때에는 loop를 하기 전에
+#   나머지에 해당하는 만큼 처리(consume)했다.
+#   Average CPE: 9.99
+#
+# 6. loop header에서 불필요한 len == 0 체크를 제거하였다.
+#   loop unrolling을 하면서 필요없어졌다.
+#   Average CPE: 9.75
+#
+# 7. Consume loop에서 나머지(edi)와 전체 길이(edx)를 둘 다 빼지
+#   않고 edx는 다 돌고 bit masking으로 계산했다.
+#   Average CPE: 9.71
+#
+# 8. mask를 2-bit(4-step)에서 3-bit(8-step)으로 늘려서, loop un-
+#   rolling을 더 하였다.
+#   Average CPE: 9.63
 #
 ##################################################################
 # Do not modify this portion
