@@ -1,0 +1,6 @@
+/.csim_results
+/.marker
+/test-trans
+/trace.*
+/tracegen
+/trans.o
