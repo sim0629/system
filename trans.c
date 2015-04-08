@@ -105,6 +105,9 @@ void registerFunctions()
     /* Register your solution function */
     registerTransFunction(transpose_submit, transpose_submit_desc); 
 
+    /* Register any additional transpose functions */
+    registerTransFunction(trans, trans_desc); 
+
 }
 
 /* 
