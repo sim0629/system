@@ -22,11 +22,13 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
-    int i, j, jj;
-    for(jj = 0; jj < M; jj += 8) {
-        for(i = 0; i < N; i++) {
-            for(j = jj; j < jj + 8; j++) {
-                B[j][i] = A[i][j];
+    int i, j, ii, jj;
+    for(ii = 0; ii < N; ii += 16) {
+        for(jj = 0; jj < M; jj += 8) {
+            for(i = ii; i < ii + 16 && i < N; i++) {
+                for(j = jj; j < jj + 8 && j < M; j++) {
+                    B[j][i] = A[i][j];
+                }
             }
         }
     }
