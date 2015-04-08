@@ -22,22 +22,49 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
-    int i, j, ii, jj, step_i, step_j;
-    if(M == 32 && N == 32) {
-        step_i = 16;
-        step_j = 8;
-    }else if(M == 64 && N == 64) {
-        step_i = 32;
-        step_j = 4;
-    }else {
-        step_i = 16;
-        step_j = 8;
+    int a0, a1, a2, a3, a4, a5, a6, a7;
+    int i, j;
+    int ii, jj;
+    if (M == 32 && N == 32)
+    {
+        for (j = 0; j < M; j += 8)
+        {
+            for (i = 0; i < N; i++)
+            {
+                a0 = A[i][j + 0];
+                a1 = A[i][j + 1];
+                a2 = A[i][j + 2];
+                a3 = A[i][j + 3];
+                a4 = A[i][j + 4];
+                a5 = A[i][j + 5];
+                a6 = A[i][j + 6];
+                a7 = A[i][j + 7];
+                B[j + 0][i] = a0;
+                B[j + 1][i] = a1;
+                B[j + 2][i] = a2;
+                B[j + 3][i] = a3;
+                B[j + 4][i] = a4;
+                B[j + 5][i] = a5;
+                B[j + 6][i] = a6;
+                B[j + 7][i] = a7;
+            }
+        }
     }
-    for(ii = 0; ii < N; ii += step_i) {
-        for(jj = 0; jj < M; jj += step_j) {
-            for(i = ii; i < ii + step_i && i < N; i++) {
-                for(j = jj; j < jj + step_j && j < M; j++) {
-                    B[j][i] = A[i][j];
+    else if (M == 64 && N == 64)
+    {
+    }
+    else
+    {
+        for (ii = 0; ii < N; ii += 16)
+        {
+            for (jj = 0; jj < M; jj += 8)
+            {
+                for (i = ii; i < ii + 16 && i < N; i++)
+                {
+                    for (j = jj; j < jj + 8 && j < M; j++)
+                    {
+                        B[j][i] = A[i][j];
+                    }
                 }
             }
         }
