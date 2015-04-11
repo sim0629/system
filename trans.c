@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include "cachelab.h"
 
+#define SWAP(a, b) (a ^= b, b ^= a, a ^= b)
+
 int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 
 /* 
@@ -154,77 +156,55 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
                         B[j + 7][i] = A[i][j + 7];
                     }
 
-                    B[jj + 7][ii + 0] ^= a0; a0 ^= B[jj + 7][ii + 0]; B[jj + 7][ii + 0] ^= a0;
-                    B[jj + 7][ii + 1] ^= a1; a1 ^= B[jj + 7][ii + 1]; B[jj + 7][ii + 1] ^= a1;
-                    B[jj + 7][ii + 2] ^= a2; a2 ^= B[jj + 7][ii + 2]; B[jj + 7][ii + 2] ^= a2;
-                    B[jj + 7][ii + 3] ^= a3; a3 ^= B[jj + 7][ii + 3]; B[jj + 7][ii + 3] ^= a3;
+                    SWAP(B[jj + 7][ii + 0], a0);
+                    SWAP(B[jj + 7][ii + 1], a1);
+                    SWAP(B[jj + 7][ii + 2], a2);
+                    SWAP(B[jj + 7][ii + 3], a3);
 
-                    B[jj + 3][ii + 4] ^= a0; a0 ^= B[jj + 3][ii + 4]; B[jj + 3][ii + 4] ^= a0;
-                    B[jj + 3][ii + 5] ^= a1; a1 ^= B[jj + 3][ii + 5]; B[jj + 3][ii + 5] ^= a1;
-                    B[jj + 3][ii + 6] ^= a2; a2 ^= B[jj + 3][ii + 6]; B[jj + 3][ii + 6] ^= a2;
-                    B[jj + 3][ii + 7] ^= a3; a3 ^= B[jj + 3][ii + 7]; B[jj + 3][ii + 7] ^= a3;
+                    SWAP(B[jj + 3][ii + 4], a0);
+                    SWAP(B[jj + 3][ii + 5], a1);
+                    SWAP(B[jj + 3][ii + 6], a2);
+                    SWAP(B[jj + 3][ii + 7], a3);
 
-                    B[jj + 4][ii + 0] ^= a0; a0 ^= B[jj + 4][ii + 0]; B[jj + 4][ii + 0] ^= a0;
-                    B[jj + 4][ii + 1] ^= a1; a1 ^= B[jj + 4][ii + 1]; B[jj + 4][ii + 1] ^= a1;
-                    B[jj + 4][ii + 2] ^= a2; a2 ^= B[jj + 4][ii + 2]; B[jj + 4][ii + 2] ^= a2;
-                    B[jj + 4][ii + 3] ^= a3; a3 ^= B[jj + 4][ii + 3]; B[jj + 4][ii + 3] ^= a3;
+                    SWAP(B[jj + 4][ii + 0], a0);
+                    SWAP(B[jj + 4][ii + 1], a1);
+                    SWAP(B[jj + 4][ii + 2], a2);
+                    SWAP(B[jj + 4][ii + 3], a3);
 
-                    B[jj + 0][ii + 4] ^= a0; a0 ^= B[jj + 0][ii + 4]; B[jj + 0][ii + 4] ^= a0;
-                    B[jj + 0][ii + 5] ^= a1; a1 ^= B[jj + 0][ii + 5]; B[jj + 0][ii + 5] ^= a1;
-                    B[jj + 0][ii + 6] ^= a2; a2 ^= B[jj + 0][ii + 6]; B[jj + 0][ii + 6] ^= a2;
-                    B[jj + 0][ii + 7] ^= a3; a3 ^= B[jj + 0][ii + 7]; B[jj + 0][ii + 7] ^= a3;
+                    SWAP(B[jj + 0][ii + 4], a0);
+                    SWAP(B[jj + 0][ii + 5], a1);
+                    SWAP(B[jj + 0][ii + 6], a2);
+                    SWAP(B[jj + 0][ii + 7], a3);
 
-                    B[jj + 0][ii + 4] ^= B[jj + 3][ii + 4];
-                    B[jj + 3][ii + 4] ^= B[jj + 0][ii + 4];
-                    B[jj + 0][ii + 4] ^= B[jj + 3][ii + 4];
+                    SWAP(B[jj + 0][ii + 4], B[jj + 3][ii + 4]);
+                    SWAP(B[jj + 0][ii + 5], B[jj + 3][ii + 5]);
+                    SWAP(B[jj + 0][ii + 6], B[jj + 3][ii + 6]);
+                    SWAP(B[jj + 0][ii + 7], B[jj + 3][ii + 7]);
 
-                    B[jj + 0][ii + 5] ^= B[jj + 3][ii + 5];
-                    B[jj + 3][ii + 5] ^= B[jj + 0][ii + 5];
-                    B[jj + 0][ii + 5] ^= B[jj + 3][ii + 5];
+                    SWAP(B[jj + 6][ii + 0], a4);
+                    SWAP(B[jj + 6][ii + 1], a5);
+                    SWAP(B[jj + 6][ii + 2], a6);
+                    SWAP(B[jj + 6][ii + 3], a7);
 
-                    B[jj + 0][ii + 6] ^= B[jj + 3][ii + 6];
-                    B[jj + 3][ii + 6] ^= B[jj + 0][ii + 6];
-                    B[jj + 0][ii + 6] ^= B[jj + 3][ii + 6];
+                    SWAP(B[jj + 2][ii + 4], a4);
+                    SWAP(B[jj + 2][ii + 5], a5);
+                    SWAP(B[jj + 2][ii + 6], a6);
+                    SWAP(B[jj + 2][ii + 7], a7);
 
-                    B[jj + 0][ii + 7] ^= B[jj + 3][ii + 7];
-                    B[jj + 3][ii + 7] ^= B[jj + 0][ii + 7];
-                    B[jj + 0][ii + 7] ^= B[jj + 3][ii + 7];
+                    SWAP(B[jj + 5][ii + 0], a4);
+                    SWAP(B[jj + 5][ii + 1], a5);
+                    SWAP(B[jj + 5][ii + 2], a6);
+                    SWAP(B[jj + 5][ii + 3], a7);
 
-                    B[jj + 6][ii + 0] ^= a4; a4 ^= B[jj + 6][ii + 0]; B[jj + 6][ii + 0] ^= a4;
-                    B[jj + 6][ii + 1] ^= a5; a5 ^= B[jj + 6][ii + 1]; B[jj + 6][ii + 1] ^= a5;
-                    B[jj + 6][ii + 2] ^= a6; a6 ^= B[jj + 6][ii + 2]; B[jj + 6][ii + 2] ^= a6;
-                    B[jj + 6][ii + 3] ^= a7; a7 ^= B[jj + 6][ii + 3]; B[jj + 6][ii + 3] ^= a7;
+                    SWAP(B[jj + 1][ii + 4], a4);
+                    SWAP(B[jj + 1][ii + 5], a5);
+                    SWAP(B[jj + 1][ii + 6], a6);
+                    SWAP(B[jj + 1][ii + 7], a7);
 
-                    B[jj + 2][ii + 4] ^= a4; a4 ^= B[jj + 2][ii + 4]; B[jj + 2][ii + 4] ^= a4;
-                    B[jj + 2][ii + 5] ^= a5; a5 ^= B[jj + 2][ii + 5]; B[jj + 2][ii + 5] ^= a5;
-                    B[jj + 2][ii + 6] ^= a6; a6 ^= B[jj + 2][ii + 6]; B[jj + 2][ii + 6] ^= a6;
-                    B[jj + 2][ii + 7] ^= a7; a7 ^= B[jj + 2][ii + 7]; B[jj + 2][ii + 7] ^= a7;
-
-                    B[jj + 5][ii + 0] ^= a4; a4 ^= B[jj + 5][ii + 0]; B[jj + 5][ii + 0] ^= a4;
-                    B[jj + 5][ii + 1] ^= a5; a5 ^= B[jj + 5][ii + 1]; B[jj + 5][ii + 1] ^= a5;
-                    B[jj + 5][ii + 2] ^= a6; a6 ^= B[jj + 5][ii + 2]; B[jj + 5][ii + 2] ^= a6;
-                    B[jj + 5][ii + 3] ^= a7; a7 ^= B[jj + 5][ii + 3]; B[jj + 5][ii + 3] ^= a7;
-
-                    B[jj + 1][ii + 4] ^= a4; a4 ^= B[jj + 1][ii + 4]; B[jj + 1][ii + 4] ^= a4;
-                    B[jj + 1][ii + 5] ^= a5; a5 ^= B[jj + 1][ii + 5]; B[jj + 1][ii + 5] ^= a5;
-                    B[jj + 1][ii + 6] ^= a6; a6 ^= B[jj + 1][ii + 6]; B[jj + 1][ii + 6] ^= a6;
-                    B[jj + 1][ii + 7] ^= a7; a7 ^= B[jj + 1][ii + 7]; B[jj + 1][ii + 7] ^= a7;
-
-                    B[jj + 1][ii + 4] ^= B[jj + 2][ii + 4];
-                    B[jj + 2][ii + 4] ^= B[jj + 1][ii + 4];
-                    B[jj + 1][ii + 4] ^= B[jj + 2][ii + 4];
-
-                    B[jj + 1][ii + 5] ^= B[jj + 2][ii + 5];
-                    B[jj + 2][ii + 5] ^= B[jj + 1][ii + 5];
-                    B[jj + 1][ii + 5] ^= B[jj + 2][ii + 5];
-
-                    B[jj + 1][ii + 6] ^= B[jj + 2][ii + 6];
-                    B[jj + 2][ii + 6] ^= B[jj + 1][ii + 6];
-                    B[jj + 1][ii + 6] ^= B[jj + 2][ii + 6];
-
-                    B[jj + 1][ii + 7] ^= B[jj + 2][ii + 7];
-                    B[jj + 2][ii + 7] ^= B[jj + 1][ii + 7];
-                    B[jj + 1][ii + 7] ^= B[jj + 2][ii + 7];
+                    SWAP(B[jj + 1][ii + 4], B[jj + 2][ii + 4]);
+                    SWAP(B[jj + 1][ii + 5], B[jj + 2][ii + 5]);
+                    SWAP(B[jj + 1][ii + 6], B[jj + 2][ii + 6]);
+                    SWAP(B[jj + 1][ii + 7], B[jj + 2][ii + 7]);
 
                 }
             }
