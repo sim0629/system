@@ -58,9 +58,9 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
         {
             for (ii = 0; ii < N; ii += 8)
             {
+                j = jj;
                 if (ii == jj)
                 {
-                    j = jj;
                     for (i = ii; i < ii + 4; i++)
                     {
                         a0 = A[i][j + 0];
@@ -112,7 +112,6 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
                 }
                 else
                 {
-                    j = jj;
                     for (i = ii; i < ii + 4; i++)
                     {
                         B[j + 0][i] = A[i][j + 0];
