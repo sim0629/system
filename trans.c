@@ -52,18 +52,59 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
     }
     else if (M == 64 && N == 64)
     {
-        for (j = 0; j < M; j += 4)
+        for (jj = 0; jj < M; jj += 8)
         {
-            for (i = 0; i < N; i++)
+            for (ii = 0; ii < N; ii += 8)
             {
-                a0 = A[i][j + 0];
-                a1 = A[i][j + 1];
-                a2 = A[i][j + 2];
-                a3 = A[i][j + 3];
-                B[j + 0][i] = a0;
-                B[j + 1][i] = a1;
-                B[j + 2][i] = a2;
-                B[j + 3][i] = a3;
+                j = jj;
+                for (i = ii; i < ii + 4; i++)
+                {
+                    a0 = A[i][j + 0];
+                    a1 = A[i][j + 1];
+                    a2 = A[i][j + 2];
+                    a3 = A[i][j + 3];
+                    a4 = A[i][j + 4];
+                    a5 = A[i][j + 5];
+                    a6 = A[i][j + 6];
+                    a7 = A[i][j + 7];
+                    B[j + 0][i] = a0;
+                    B[j + 1][i] = a1;
+                    B[j + 2][i] = a2;
+                    B[j + 3][i] = a3;
+                    B[j + 3][i + 4] = a4;
+                    B[j + 2][i + 4] = a5;
+                    B[j + 1][i + 4] = a6;
+                    B[j + 0][i + 4] = a7;
+                }
+                for (i = ii + 4; i < ii + 8; i++)
+                {
+                    a0 = A[i][j + 0];
+                    a1 = A[i][j + 1];
+                    a2 = A[i][j + 2];
+                    a3 = A[i][j + 3];
+                    a4 = A[i][j + 4];
+                    a5 = A[i][j + 5];
+                    a6 = A[i][j + 6];
+                    a7 = A[i][j + 7];
+                    B[j + 7][i - 4] = a0;
+                    B[j + 6][i - 4] = a1;
+                    B[j + 5][i - 4] = a2;
+                    B[j + 4][i - 4] = a3;
+                    B[j + 4][i] = a4;
+                    B[j + 5][i] = a5;
+                    B[j + 6][i] = a6;
+                    B[j + 7][i] = a7;
+                }
+                for (j = 0; j < 4; j++)
+                {
+                    for (i = 0; i < 4; i++)
+                    {
+                        a0 = B[jj + j][ii + 4 + i];
+                        a1 = B[jj + 4 + (3 - j)][ii + i];
+                        B[jj + j][ii + 4 + i] = a1;
+                        B[jj + 4 + (3 - j)][ii + i] = a0;
+                    }
+                }
             }
         }
     }
