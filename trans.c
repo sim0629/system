@@ -1,3 +1,24 @@
+/* 2009-11744 심규민
+ * 시스템 프로그래밍 cachelab part b
+ *
+ * 목표
+ *  (s, E, b) = (5, 1, 5) 인 cache를 가지고
+ *  32x32, 64x64, 61x67 matrix에 대하여
+ *  out-place transpose를 miss가 적게 나도록
+ *  효율적으로 하는 것이다.
+ *
+ * 구현
+ *  기본적으로 blocking technique을 이용하였다.
+ *  하나의 cache block은 32(=2^5)byte이므로 int(=4byte) 8개가 들어간다.
+ *  이 특징을 이용하여 기본적으로 8개 단위로 끊어서 hit ratio를 올렸다.
+ *  각 matrix 사이즈에 대한 상세 구현은 코드와 함께 주석으로 설명하였다.
+ *
+ * 결과
+ *  32x32(MxN): 287 misses
+ *  64x64(MxN): 1347 misses
+ *  61x67(MxN): 1953 misses
+ */
+
 /* 
  * trans.c - Matrix transpose B = A^T
  *
@@ -24,15 +45,20 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
+    // local variables (total 12)
     int a0, a1, a2, a3, a4, a5, a6, a7;
     int i, j;
     int ii, jj;
+    // 32x32
     if (M == 32 && N == 32)
     {
+        // 원소를 8개씩 끊어서
         for (j = 0; j < M; j += 8)
         {
             for (i = 0; i < N; i++)
             {
+                // A에 있는 하나의 block의 원소를
+                // 모두 register로 읽어 들이고,
                 a0 = A[i][j + 0];
                 a1 = A[i][j + 1];
                 a2 = A[i][j + 2];
@@ -41,6 +67,7 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
                 a5 = A[i][j + 5];
                 a6 = A[i][j + 6];
                 a7 = A[i][j + 7];
+                // 읽어 들인 값으로 B를 채운다.
                 B[j + 0][i] = a0;
                 B[j + 1][i] = a1;
                 B[j + 2][i] = a2;
@@ -52,15 +79,22 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
             }
         }
     }
+    // 64x64
     else if (M == 64 && N == 64)
     {
+        // 일단 8x8 block으로 끊어서 처리한다.
         for (jj = 0; jj < M; jj += 8)
         {
             for (ii = 0; ii < N; ii += 8)
             {
                 j = jj;
+                // 대각선 상에 있는 block은
                 if (ii == jj)
                 {
+                    // 4줄 단위로 같은 set에 들어가기 때문에 4줄씩 끊어서 처리한다.
+                    // A의 4x8을 B의 8x4로 옮겨야 하지만 miss를 줄이기 위해 우선 B의 4x8에 옮긴다.
+                    // 이 때 B에는 transpose가 맞는 4x4가 있고 틀린 4x4가 발생하는데
+                    // 틀린 4x4는 줄을 역순으로 넣어놓는다.
                     for (i = ii; i < ii + 4; i++)
                     {
                         a0 = A[i][j + 0];
@@ -80,6 +114,7 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
                         B[j + 1][i + 4] = a6;
                         B[j + 0][i + 4] = a7;
                     }
+                    // 나머지 4x8에 대해서도 같은 식으로 처리한다.
                     for (i = ii + 4; i < ii + 8; i++)
                     {
                         a0 = A[i][j + 0];
@@ -99,6 +134,7 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
                         B[j + 6][i] = a6;
                         B[j + 7][i] = a7;
                     }
+                    // B에 서로 뒤바뀐 두개의 4x4를 교환해준다.
                     for (j = 0; j < 4; j++)
                     {
                         for (i = 0; i < 4; i++)
@@ -110,8 +146,14 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
                         }
                     }
                 }
-                else
+                // 대각선 상에 있지 않은 block은
+                else // ii != jj
                 {
+                    // 대각선 상에 있는 block과 마찬가지로 4줄씩 끊어서 처리한다.
+                    // 틀린 4x4를 역순으로 넣어놓는 트릭은 마찬가지로 사용한다.
+                    // 하지만 대각선 상에 있는 block과는 다르게 더 최적화 하였다.
+                    // A의 4x8과 B의 4x8은 서로 같은 set에 들어가지 않기 때문에 register를 통해서 옮길 필요가 없다.
+                    // 그래서 A의 전반부 4x8을 옮기면서 그 중에 8개의 값을 register에 불러다 놓을 수 있다.
                     for (i = ii; i < ii + 4; i++)
                     {
                         B[j + 0][i] = A[i][j + 0];
@@ -143,6 +185,7 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
                             a7 = B[j + 1][i + 4];
                         }
                     }
+                    // A의 후반부 4x8을 처리한다.
                     for (i = ii + 4; i < ii + 8; i++)
                     {
                         B[j + 7][i - 4] = A[i][j + 0];
@@ -154,6 +197,12 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
                         B[j + 6][i] = A[i][j + 6];
                         B[j + 7][i] = A[i][j + 7];
                     }
+                    // 여기까지 일단 cold miss 16번만 발생한다.
+
+                    // B에 서로 뒤바뀐 두개의 4x4를 교환해준다.
+                    // 미리 불러들였던 register의 값과
+                    // xor 방식의 in-place swap을 사용하면
+                    // 4번의 miss로 해낼 수 있다.
 
                     SWAP(B[jj + 7][ii + 0], a0);
                     SWAP(B[jj + 7][ii + 1], a1);
@@ -209,8 +258,10 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
             }
         }
     }
+    // 61x67 or MxN
     else
     {
+        // 16x8 block으로 끊어서 처리한다.
         for (ii = 0; ii < N; ii += 16)
         {
             for (jj = 0; jj < M; jj += 8)
