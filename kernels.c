@@ -10,9 +10,9 @@
  * Please fill in the following student struct 
  */
 student_t student = {
-    "2015-12345",       /* Student Id */
-    "Alice",		/* Student Name, in English */
-    "alice@snu.ac.kr",  /* email address */
+    "2009-11744",
+    "Gyumin Sim",
+    "sim0629@snu.ac.kr",
 };
 
 /***************
