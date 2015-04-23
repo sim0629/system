@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include "defs.h"
 
+#define SIDX(i,j,n) ((j)*(n)+(i))
+
 /* 
  * Please fill in the following student struct 
  */
@@ -164,66 +166,66 @@ void smooth(int dim, pixel *src, pixel *dst)
     {
         // i == 0
         {
-            r = src[RIDX(0, 0, dim)].red
-              + src[RIDX(0, 1, dim)].red
-              + src[RIDX(1, 0, dim)].red
-              + src[RIDX(1, 1, dim)].red;
-            g = src[RIDX(0, 0, dim)].green
-              + src[RIDX(0, 1, dim)].green
-              + src[RIDX(1, 0, dim)].green
-              + src[RIDX(1, 1, dim)].green;
-            b = src[RIDX(0, 0, dim)].blue
-              + src[RIDX(0, 1, dim)].blue
-              + src[RIDX(1, 0, dim)].blue
-              + src[RIDX(1, 1, dim)].blue;
-            dst[RIDX(0, 0, dim)].red = r / 4;
-            dst[RIDX(0, 0, dim)].green = g / 4;
-            dst[RIDX(0, 0, dim)].blue = b / 4;
+            r = src[SIDX(0, 0, dim)].red
+              + src[SIDX(0, 1, dim)].red
+              + src[SIDX(1, 0, dim)].red
+              + src[SIDX(1, 1, dim)].red;
+            g = src[SIDX(0, 0, dim)].green
+              + src[SIDX(0, 1, dim)].green
+              + src[SIDX(1, 0, dim)].green
+              + src[SIDX(1, 1, dim)].green;
+            b = src[SIDX(0, 0, dim)].blue
+              + src[SIDX(0, 1, dim)].blue
+              + src[SIDX(1, 0, dim)].blue
+              + src[SIDX(1, 1, dim)].blue;
+            dst[SIDX(0, 0, dim)].red = r / 4;
+            dst[SIDX(0, 0, dim)].green = g / 4;
+            dst[SIDX(0, 0, dim)].blue = b / 4;
         }
 
         // i == 1
         {
-            r += src[RIDX(2, 0, dim)].red
-               + src[RIDX(2, 1, dim)].red;
-            g += src[RIDX(2, 0, dim)].green
-               + src[RIDX(2, 1, dim)].green;
-            b += src[RIDX(2, 0, dim)].blue
-               + src[RIDX(2, 1, dim)].blue;
-            dst[RIDX(1, 0, dim)].red = r / 6;
-            dst[RIDX(1, 0, dim)].green = g / 6;
-            dst[RIDX(1, 0, dim)].blue = b / 6;
+            r += src[SIDX(2, 0, dim)].red
+               + src[SIDX(2, 1, dim)].red;
+            g += src[SIDX(2, 0, dim)].green
+               + src[SIDX(2, 1, dim)].green;
+            b += src[SIDX(2, 0, dim)].blue
+               + src[SIDX(2, 1, dim)].blue;
+            dst[SIDX(1, 0, dim)].red = r / 6;
+            dst[SIDX(1, 0, dim)].green = g / 6;
+            dst[SIDX(1, 0, dim)].blue = b / 6;
         }
 
         for (i = 2; i < dim - 1; i++)
         {
-            r += src[RIDX(i + 1, 0, dim)].red
-               + src[RIDX(i + 1, 1, dim)].red
-               - src[RIDX(i - 2, 0, dim)].red
-               - src[RIDX(i - 2, 1, dim)].red;
-            g += src[RIDX(i + 1, 0, dim)].green
-               + src[RIDX(i + 1, 1, dim)].green
-               - src[RIDX(i - 2, 0, dim)].green
-               - src[RIDX(i - 2, 1, dim)].green;
-            b += src[RIDX(i + 1, 0, dim)].blue
-               + src[RIDX(i + 1, 1, dim)].blue
-               - src[RIDX(i - 2, 0, dim)].blue
-               - src[RIDX(i - 2, 1, dim)].blue;
-            dst[RIDX(i, 0, dim)].red = r / 6;
-            dst[RIDX(i, 0, dim)].green = g / 6;
-            dst[RIDX(i, 0, dim)].blue = b / 6;
+            r += src[SIDX(i + 1, 0, dim)].red
+               + src[SIDX(i + 1, 1, dim)].red
+               - src[SIDX(i - 2, 0, dim)].red
+               - src[SIDX(i - 2, 1, dim)].red;
+            g += src[SIDX(i + 1, 0, dim)].green
+               + src[SIDX(i + 1, 1, dim)].green
+               - src[SIDX(i - 2, 0, dim)].green
+               - src[SIDX(i - 2, 1, dim)].green;
+            b += src[SIDX(i + 1, 0, dim)].blue
+               + src[SIDX(i + 1, 1, dim)].blue
+               - src[SIDX(i - 2, 0, dim)].blue
+               - src[SIDX(i - 2, 1, dim)].blue;
+            dst[SIDX(i, 0, dim)].red = r / 6;
+            dst[SIDX(i, 0, dim)].green = g / 6;
+            dst[SIDX(i, 0, dim)].blue = b / 6;
         }
 
         // i == dim - 1
         {
-            r -= src[RIDX(i - 2, 0, dim)].red
-               + src[RIDX(i - 2, 1, dim)].red;
-            g -= src[RIDX(i - 2, 0, dim)].green
-               + src[RIDX(i - 2, 1, dim)].green;
-            b -= src[RIDX(i - 2, 0, dim)].blue
-               + src[RIDX(i - 2, 1, dim)].blue;
-            dst[RIDX(i, 0, dim)].red = r / 4;
-            dst[RIDX(i, 0, dim)].green = g / 4;
-            dst[RIDX(i, 0, dim)].blue = b / 4;
+            r -= src[SIDX(i - 2, 0, dim)].red
+               + src[SIDX(i - 2, 1, dim)].red;
+            g -= src[SIDX(i - 2, 0, dim)].green
+               + src[SIDX(i - 2, 1, dim)].green;
+            b -= src[SIDX(i - 2, 0, dim)].blue
+               + src[SIDX(i - 2, 1, dim)].blue;
+            dst[SIDX(i, 0, dim)].red = r / 4;
+            dst[SIDX(i, 0, dim)].green = g / 4;
+            dst[SIDX(i, 0, dim)].blue = b / 4;
         }
     }
 
@@ -231,84 +233,84 @@ void smooth(int dim, pixel *src, pixel *dst)
     {
         // i == 0
         {
-            r = src[RIDX(0, j - 1, dim)].red
-              + src[RIDX(0, j, dim)].red
-              + src[RIDX(0, j + 1, dim)].red
-              + src[RIDX(1, j - 1, dim)].red
-              + src[RIDX(1, j, dim)].red
-              + src[RIDX(1, j + 1, dim)].red;
-            g = src[RIDX(0, j - 1, dim)].green
-              + src[RIDX(0, j, dim)].green
-              + src[RIDX(0, j + 1, dim)].green
-              + src[RIDX(1, j - 1, dim)].green
-              + src[RIDX(1, j, dim)].green
-              + src[RIDX(1, j + 1, dim)].green;
-            b = src[RIDX(0, j - 1, dim)].blue
-              + src[RIDX(0, j, dim)].blue
-              + src[RIDX(0, j + 1, dim)].blue
-              + src[RIDX(1, j - 1, dim)].blue
-              + src[RIDX(1, j, dim)].blue
-              + src[RIDX(1, j + 1, dim)].blue;
-            dst[RIDX(0, j, dim)].red = r / 6;
-            dst[RIDX(0, j, dim)].green = g / 6;
-            dst[RIDX(0, j, dim)].blue = b / 6;
+            r = src[SIDX(0, j - 1, dim)].red
+              + src[SIDX(0, j, dim)].red
+              + src[SIDX(0, j + 1, dim)].red
+              + src[SIDX(1, j - 1, dim)].red
+              + src[SIDX(1, j, dim)].red
+              + src[SIDX(1, j + 1, dim)].red;
+            g = src[SIDX(0, j - 1, dim)].green
+              + src[SIDX(0, j, dim)].green
+              + src[SIDX(0, j + 1, dim)].green
+              + src[SIDX(1, j - 1, dim)].green
+              + src[SIDX(1, j, dim)].green
+              + src[SIDX(1, j + 1, dim)].green;
+            b = src[SIDX(0, j - 1, dim)].blue
+              + src[SIDX(0, j, dim)].blue
+              + src[SIDX(0, j + 1, dim)].blue
+              + src[SIDX(1, j - 1, dim)].blue
+              + src[SIDX(1, j, dim)].blue
+              + src[SIDX(1, j + 1, dim)].blue;
+            dst[SIDX(0, j, dim)].red = r / 6;
+            dst[SIDX(0, j, dim)].green = g / 6;
+            dst[SIDX(0, j, dim)].blue = b / 6;
         }
 
         // i == 1
         {
-            r += src[RIDX(2, j - 1, dim)].red
-               + src[RIDX(2, j, dim)].red
-               + src[RIDX(2, j + 1, dim)].red;
-            g += src[RIDX(2, j - 1, dim)].green
-               + src[RIDX(2, j, dim)].green
-               + src[RIDX(2, j + 1, dim)].green;
-            b += src[RIDX(2, j - 1, dim)].blue
-               + src[RIDX(2, j, dim)].blue
-               + src[RIDX(2, j + 1, dim)].blue;
-            dst[RIDX(1, j, dim)].red = r / 9;
-            dst[RIDX(1, j, dim)].green = g / 9;
-            dst[RIDX(1, j, dim)].blue = b / 9;
+            r += src[SIDX(2, j - 1, dim)].red
+               + src[SIDX(2, j, dim)].red
+               + src[SIDX(2, j + 1, dim)].red;
+            g += src[SIDX(2, j - 1, dim)].green
+               + src[SIDX(2, j, dim)].green
+               + src[SIDX(2, j + 1, dim)].green;
+            b += src[SIDX(2, j - 1, dim)].blue
+               + src[SIDX(2, j, dim)].blue
+               + src[SIDX(2, j + 1, dim)].blue;
+            dst[SIDX(1, j, dim)].red = r / 9;
+            dst[SIDX(1, j, dim)].green = g / 9;
+            dst[SIDX(1, j, dim)].blue = b / 9;
         }
 
         for (i = 2; i < dim - 1; i++)
         {
-            r += src[RIDX(i + 1, j - 1, dim)].red
-               + src[RIDX(i + 1, j, dim)].red
-               + src[RIDX(i + 1, j + 1, dim)].red
-               - src[RIDX(i - 2, j - 1, dim)].red
-               - src[RIDX(i - 2, j, dim)].red
-               - src[RIDX(i - 2, j + 1, dim)].red;
-            g += src[RIDX(i + 1, j - 1, dim)].green
-               + src[RIDX(i + 1, j, dim)].green
-               + src[RIDX(i + 1, j + 1, dim)].green
-               - src[RIDX(i - 2, j - 1, dim)].green
-               - src[RIDX(i - 2, j, dim)].green
-               - src[RIDX(i - 2, j + 1, dim)].green;
-            b += src[RIDX(i + 1, j - 1, dim)].blue
-               + src[RIDX(i + 1, j, dim)].blue
-               + src[RIDX(i + 1, j + 1, dim)].blue
-               - src[RIDX(i - 2, j, dim)].blue
-               - src[RIDX(i - 2, j - 1, dim)].blue
-               - src[RIDX(i - 2, j + 1, dim)].blue;
-            dst[RIDX(i, j, dim)].red = r / 9;
-            dst[RIDX(i, j, dim)].green = g / 9;
-            dst[RIDX(i, j, dim)].blue = b / 9;
+            r += src[SIDX(i + 1, j - 1, dim)].red
+               + src[SIDX(i + 1, j, dim)].red
+               + src[SIDX(i + 1, j + 1, dim)].red
+               - src[SIDX(i - 2, j - 1, dim)].red
+               - src[SIDX(i - 2, j, dim)].red
+               - src[SIDX(i - 2, j + 1, dim)].red;
+            g += src[SIDX(i + 1, j - 1, dim)].green
+               + src[SIDX(i + 1, j, dim)].green
+               + src[SIDX(i + 1, j + 1, dim)].green
+               - src[SIDX(i - 2, j - 1, dim)].green
+               - src[SIDX(i - 2, j, dim)].green
+               - src[SIDX(i - 2, j + 1, dim)].green;
+            b += src[SIDX(i + 1, j - 1, dim)].blue
+               + src[SIDX(i + 1, j, dim)].blue
+               + src[SIDX(i + 1, j + 1, dim)].blue
+               - src[SIDX(i - 2, j, dim)].blue
+               - src[SIDX(i - 2, j - 1, dim)].blue
+               - src[SIDX(i - 2, j + 1, dim)].blue;
+            dst[SIDX(i, j, dim)].red = r / 9;
+            dst[SIDX(i, j, dim)].green = g / 9;
+            dst[SIDX(i, j, dim)].blue = b / 9;
         }
 
         // i == dim - 1
         {
-            r -= src[RIDX(i - 2, j - 1, dim)].red
-               + src[RIDX(i - 2, j, dim)].red
-               + src[RIDX(i - 2, j + 1, dim)].red;
-            g -= src[RIDX(i - 2, j - 1, dim)].green
-               + src[RIDX(i - 2, j, dim)].green
-               + src[RIDX(i - 2, j + 1, dim)].green;
-            b -= src[RIDX(i - 2, j - 1, dim)].blue
-               + src[RIDX(i - 2, j, dim)].blue
-               + src[RIDX(i - 2, j + 1, dim)].blue;
-            dst[RIDX(i, j, dim)].red = r / 6;
-            dst[RIDX(i, j, dim)].green = g / 6;
-            dst[RIDX(i, j, dim)].blue = b / 6;
+            r -= src[SIDX(i - 2, j - 1, dim)].red
+               + src[SIDX(i - 2, j, dim)].red
+               + src[SIDX(i - 2, j + 1, dim)].red;
+            g -= src[SIDX(i - 2, j - 1, dim)].green
+               + src[SIDX(i - 2, j, dim)].green
+               + src[SIDX(i - 2, j + 1, dim)].green;
+            b -= src[SIDX(i - 2, j - 1, dim)].blue
+               + src[SIDX(i - 2, j, dim)].blue
+               + src[SIDX(i - 2, j + 1, dim)].blue;
+            dst[SIDX(i, j, dim)].red = r / 6;
+            dst[SIDX(i, j, dim)].green = g / 6;
+            dst[SIDX(i, j, dim)].blue = b / 6;
         }
     }
 
@@ -316,66 +318,66 @@ void smooth(int dim, pixel *src, pixel *dst)
     {
         // i == 0
         {
-            r = src[RIDX(0, j - 1, dim)].red
-              + src[RIDX(0, j, dim)].red
-              + src[RIDX(1, j - 1, dim)].red
-              + src[RIDX(1, j, dim)].red;
-            g = src[RIDX(0, j - 1, dim)].green
-              + src[RIDX(0, j, dim)].green
-              + src[RIDX(1, j - 1, dim)].green
-              + src[RIDX(1, j, dim)].green;
-            b = src[RIDX(0, j - 1, dim)].blue
-              + src[RIDX(0, j, dim)].blue
-              + src[RIDX(1, j - 1, dim)].blue
-              + src[RIDX(1, j, dim)].blue;
-            dst[RIDX(0, j, dim)].red = r / 4;
-            dst[RIDX(0, j, dim)].green = g / 4;
-            dst[RIDX(0, j, dim)].blue = b / 4;
+            r = src[SIDX(0, j - 1, dim)].red
+              + src[SIDX(0, j, dim)].red
+              + src[SIDX(1, j - 1, dim)].red
+              + src[SIDX(1, j, dim)].red;
+            g = src[SIDX(0, j - 1, dim)].green
+              + src[SIDX(0, j, dim)].green
+              + src[SIDX(1, j - 1, dim)].green
+              + src[SIDX(1, j, dim)].green;
+            b = src[SIDX(0, j - 1, dim)].blue
+              + src[SIDX(0, j, dim)].blue
+              + src[SIDX(1, j - 1, dim)].blue
+              + src[SIDX(1, j, dim)].blue;
+            dst[SIDX(0, j, dim)].red = r / 4;
+            dst[SIDX(0, j, dim)].green = g / 4;
+            dst[SIDX(0, j, dim)].blue = b / 4;
         }
 
         // i == 1
         {
-            r += src[RIDX(2, j - 1, dim)].red
-               + src[RIDX(2, j, dim)].red;
-            g += src[RIDX(2, j - 1, dim)].green
-               + src[RIDX(2, j, dim)].green;
-            b += src[RIDX(2, j - 1, dim)].blue
-               + src[RIDX(2, j, dim)].blue;
-            dst[RIDX(1, j, dim)].red = r / 6;
-            dst[RIDX(1, j, dim)].green = g / 6;
-            dst[RIDX(1, j, dim)].blue = b / 6;
+            r += src[SIDX(2, j - 1, dim)].red
+               + src[SIDX(2, j, dim)].red;
+            g += src[SIDX(2, j - 1, dim)].green
+               + src[SIDX(2, j, dim)].green;
+            b += src[SIDX(2, j - 1, dim)].blue
+               + src[SIDX(2, j, dim)].blue;
+            dst[SIDX(1, j, dim)].red = r / 6;
+            dst[SIDX(1, j, dim)].green = g / 6;
+            dst[SIDX(1, j, dim)].blue = b / 6;
         }
 
         for (i = 2; i < dim - 1; i++)
         {
-            r += src[RIDX(i + 1, j - 1, dim)].red
-               + src[RIDX(i + 1, j, dim)].red
-               - src[RIDX(i - 2, j - 1, dim)].red
-               - src[RIDX(i - 2, j, dim)].red;
-            g += src[RIDX(i + 1, j - 1, dim)].green
-               + src[RIDX(i + 1, j, dim)].green
-               - src[RIDX(i - 2, j - 1, dim)].green
-               - src[RIDX(i - 2, j, dim)].green;
-            b += src[RIDX(i + 1, j - 1, dim)].blue
-               + src[RIDX(i + 1, j, dim)].blue
-               - src[RIDX(i - 2, j - 1, dim)].blue
-               - src[RIDX(i - 2, j, dim)].blue;
-            dst[RIDX(i, j, dim)].red = r / 6;
-            dst[RIDX(i, j, dim)].green = g / 6;
-            dst[RIDX(i, j, dim)].blue = b / 6;
+            r += src[SIDX(i + 1, j - 1, dim)].red
+               + src[SIDX(i + 1, j, dim)].red
+               - src[SIDX(i - 2, j - 1, dim)].red
+               - src[SIDX(i - 2, j, dim)].red;
+            g += src[SIDX(i + 1, j - 1, dim)].green
+               + src[SIDX(i + 1, j, dim)].green
+               - src[SIDX(i - 2, j - 1, dim)].green
+               - src[SIDX(i - 2, j, dim)].green;
+            b += src[SIDX(i + 1, j - 1, dim)].blue
+               + src[SIDX(i + 1, j, dim)].blue
+               - src[SIDX(i - 2, j - 1, dim)].blue
+               - src[SIDX(i - 2, j, dim)].blue;
+            dst[SIDX(i, j, dim)].red = r / 6;
+            dst[SIDX(i, j, dim)].green = g / 6;
+            dst[SIDX(i, j, dim)].blue = b / 6;
         }
 
         // i == dim - 1
         {
-            r -= src[RIDX(i - 2, j - 1, dim)].red
-               + src[RIDX(i - 2, j, dim)].red;
-            g -= src[RIDX(i - 2, j - 1, dim)].green
-               + src[RIDX(i - 2, j, dim)].green;
-            b -= src[RIDX(i - 2, j - 1, dim)].blue
-               + src[RIDX(i - 2, j, dim)].blue;
-            dst[RIDX(i, j, dim)].red = r / 4;
-            dst[RIDX(i, j, dim)].green = g / 4;
-            dst[RIDX(i, j, dim)].blue = b / 4;
+            r -= src[SIDX(i - 2, j - 1, dim)].red
+               + src[SIDX(i - 2, j, dim)].red;
+            g -= src[SIDX(i - 2, j - 1, dim)].green
+               + src[SIDX(i - 2, j, dim)].green;
+            b -= src[SIDX(i - 2, j - 1, dim)].blue
+               + src[SIDX(i - 2, j, dim)].blue;
+            dst[SIDX(i, j, dim)].red = r / 4;
+            dst[SIDX(i, j, dim)].green = g / 4;
+            dst[SIDX(i, j, dim)].blue = b / 4;
         }
     }
 
