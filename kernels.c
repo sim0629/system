@@ -158,7 +158,7 @@ char smooth_descr[] = "smooth: Current working version";
 void smooth(int dim, pixel *src, pixel *dst) 
 {
     int i, j;
-    int r, g, b;
+    unsigned int r, g, b;
 
     for (j = 0; j < dim; j++)
     {
