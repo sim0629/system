@@ -164,8 +164,9 @@ int main(int argc, char **argv)
  */
 void eval(char *cmdline)
 {
+    sigset_t set; // for (un)blocking SIGCHLD
+    pid_t pid; // for forking
     char *argv[MAXARGS];
-    sigset_t set;
     int bg = parseline(cmdline, argv);
 
     if (argv[0] == NULL)
@@ -174,14 +175,35 @@ void eval(char *cmdline)
     if (builtin_cmd(argv))
         return;
 
-    sigemptyset(&set);
-    sigaddset(&set, SIGCHLD);
-    sigprocmask(SIG_BLOCK, &set, NULL);
+    // set the flag for SIGCHLD
+    if (sigemptyset(&set) < 0) {
+        unix_error("sigemptyset error");
+        return;
+    }
+    if (sigaddset(&set, SIGCHLD) < 0) {
+        unix_error("sigaddset error");
+        return;
+    }
+    // block SIGCHLD for avoiding race condition
+    if (sigprocmask(SIG_BLOCK, &set, NULL) < 0) {
+        unix_error("sigprocmask block error");
+        return;
+    }
 
-    pid_t pid = fork();
+    if ((pid = fork()) < 0) {
+        unix_error("fork error");
+        return;
+    }
+
     if (pid == 0) { // child
-        setpgid(0, 0);
-        sigprocmask(SIG_UNBLOCK, &set, NULL);
+        if (setpgid(0, 0) < 0) {
+            unix_error("setpgid error");
+            exit(1);
+        }
+        if (sigprocmask(SIG_UNBLOCK, &set, NULL) < 0) {
+            unix_error("sigprocmask unblock error");
+            exit(1);
+        }
         if (execve(argv[0], argv, environ) < 0) {
             fprintf(stderr, "%s: Command not found\n", argv[0]);
             exit(1);
@@ -192,7 +214,9 @@ void eval(char *cmdline)
         if (bg) {
             printf("[%d] (%d) %s", pid2jid(pid), pid, cmdline);
         }
-        sigprocmask(SIG_UNBLOCK, &set, NULL);
+        if (sigprocmask(SIG_UNBLOCK, &set, NULL) < 0) {
+            unix_error("sigprocmask unblock error");
+        }
         if (!bg) {
             waitfg(pid);
         }
@@ -336,7 +360,8 @@ void waitfg(pid_t pid)
 {
     struct job_t *job = getjobpid(jobs, pid);
     while (job->state == FG) {
-        sleep(1);
+        if (sleep(1))
+            ; // don't care
     }
     return;
 }
@@ -359,7 +384,7 @@ void sigchld_handler(int sig)
     struct job_t *job;
 
     while ((pid = waitpid(-1, &child_status, WNOHANG | WUNTRACED)) > 0) {
-        if (WIFEXITED(child_status)) {
+        if (WIFEXITED(child_status)) { // normally terminated
             deletejob(jobs, pid);
         }
         else if (WIFSIGNALED(child_status)) {
@@ -384,7 +409,9 @@ void sigint_handler(int sig)
 {
     pid_t pid = fgpid(jobs);
     if (pid) {
-        kill(-pid, sig);
+        if (kill(-pid, sig) < 0) {
+            unix_error("kill SIGINT error");
+        }
     }
 }
 
@@ -397,7 +424,9 @@ void sigtstp_handler(int sig)
 {
     pid_t pid = fgpid(jobs);
     if (pid) {
-        kill(-pid, sig);
+        if (kill(-pid, sig) < 0) {
+            unix_error("kill SIGTSTP error");
+        }
     }
 }
 
