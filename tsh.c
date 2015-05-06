@@ -466,7 +466,7 @@ void usage(void)
  */
 void unix_error(char *msg)
 {
-    fprintf(stdout, "%s: %s\n", msg, strerror(errno));
+    fprintf(stderr, "%s: %s\n", msg, strerror(errno));
     exit(1);
 }
 
@@ -475,7 +475,7 @@ void unix_error(char *msg)
  */
 void app_error(char *msg)
 {
-    fprintf(stdout, "%s\n", msg);
+    fprintf(stderr, "%s\n", msg);
     exit(1);
 }
 
