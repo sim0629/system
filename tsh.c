@@ -146,7 +146,6 @@ int main(int argc, char **argv)
         /* Evaluate the command line */
         eval(cmdline);
         fflush(stdout);
-        fflush(stdout);
     }
 
     exit(0); /* control never reaches here */
