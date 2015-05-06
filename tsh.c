@@ -164,7 +164,39 @@ int main(int argc, char **argv)
  */
 void eval(char *cmdline)
 {
-    return;
+    char *argv[MAXARGS];
+    sigset_t set;
+    int bg = parseline(cmdline, argv);
+
+    if (argv[0] == NULL)
+        return; // ignore blank line
+
+    if (builtin_cmd(argv))
+        return;
+
+    sigemptyset(&set);
+    sigaddset(&set, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &set, NULL);
+
+    pid_t pid = fork();
+    if (pid == 0) { // child
+        setpgid(0, 0);
+        sigprocmask(SIG_UNBLOCK, &set, NULL);
+        if (execve(argv[0], argv, environ) < 0) {
+            fprintf(stderr, "%s: Command not found\n", argv[0]);
+            exit(1);
+        }
+    }
+    else { // parent
+        addjob(jobs, pid, bg ? BG : FG, cmdline);
+        if (bg) {
+            printf("[%d] (%d) %s", pid2jid(pid), pid, cmdline);
+        }
+        sigprocmask(SIG_UNBLOCK, &set, NULL);
+        if (!bg) {
+            waitfg(pid);
+        }
+    }
 }
 
 /*
@@ -278,7 +310,25 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig)
 {
-    return;
+    int child_status;
+    pid_t pid;
+    struct job_t *job;
+
+    while ((pid = waitpid(-1, &child_status, WNOHANG | WUNTRACED)) > 0) {
+        if (WIFEXITED(child_status)) {
+            deletejob(jobs, pid);
+        }
+        else if (WIFSIGNALED(child_status)) {
+            job = getjobpid(jobs, pid);
+            printf("Job [%d] (%d) terminated by signal %d\n", job->jid, job->pid, WTERMSIG(child_status));
+            deletejob(jobs, pid);
+        }
+        else if (WIFSTOPPED(child_status)) {
+            job = getjobpid(jobs, pid);
+            printf("Job [%d] (%d) stopped by signal %d\n", job->jid, job->pid, WSTOPSIG(child_status));
+            job->state = ST;
+        }
+    }
 }
 
 /*
