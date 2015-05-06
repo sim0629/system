@@ -259,6 +259,10 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
+    struct job_t *job = getjobpid(jobs, pid);
+    while (job->state == FG) {
+        sleep(1);
+    }
     return;
 }
 
