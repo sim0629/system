@@ -289,7 +289,10 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig)
 {
-    return;
+    pid_t pid = fgpid(jobs);
+    if (pid) {
+        kill(-pid, sig);
+    }
 }
 
 /*
@@ -299,7 +302,10 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig)
 {
-    return;
+    pid_t pid = fgpid(jobs);
+    if (pid) {
+        kill(-pid, sig);
+    }
 }
 
 /*********************
