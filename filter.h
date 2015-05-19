@@ -1,7 +1,7 @@
 #ifndef SGM_FILTER_H
 #define SGM_FILTER_H
 
-#define FILTER_MAX_N 8
+#define FILTER_MAX_N 16
 
 typedef struct {
     int n;

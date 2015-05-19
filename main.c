@@ -2,10 +2,11 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "filter.h"
 
 #define NULL ((void *)0)
-#define MAX_N 8
+#define MAX_N 16
 #define MAX_CNT 100000000
 
 static char type;
@@ -17,13 +18,13 @@ static int cnt;
 static sem_t sem;
 static filter_t filter;
 
-// ./run [sem|filter] [2|4|8]
+// ./run [type=sem|filter] [n<=16]
 void parse_arguments(int argc, char *argv[]) {
     assert(argc >= 3);
     assert(argv[1][0] == 's' || argv[1][0] == 'f');
     type = argv[1][0];
-    assert(argv[2][0] == '2' || argv[2][0] == '4' || argv[2][0] == '8');
-    n = (unsigned int)(argv[2][0] - '0');
+    n = (unsigned int)(atoi(argv[2]));
+    assert(n <= MAX_N);
 }
 
 void *count(void *param) {
