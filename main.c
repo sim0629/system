@@ -6,7 +6,7 @@
 
 #define NULL ((void *)0)
 #define MAX_N 8
-#define MAX_CNT 10000000
+#define MAX_CNT 100000000
 
 static char type;
 static unsigned int n;
