@@ -25,6 +25,7 @@ void parse_arguments(int argc, char *argv[]) {
     type = argv[1][0];
     n = (unsigned int)(atoi(argv[2]));
     assert(n <= MAX_N);
+    printf("type=%s n=%u\n", argv[1], n);
 }
 
 void *count(void *param) {
