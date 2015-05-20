@@ -7,7 +7,7 @@
 
 #define NULL ((void *)0)
 #define MAX_N 16
-#define MAX_CNT 100000000
+#define MAX_CNT 10000000
 
 static char type;
 static unsigned int n;
@@ -29,12 +29,13 @@ void parse_arguments(int argc, char *argv[]) {
 
 void *count(void *param) {
     unsigned int i = (unsigned int)(unsigned long long)param, c;
-    if(type == 's') sem_wait(&sem);
-    else filter_lock(&filter, i);
-    for(c = 0; c < MAX_CNT; c++)
+    for(c = 0; c < MAX_CNT; c++) {
+        if(type == 's') sem_wait(&sem);
+        else filter_lock(&filter, i);
         cnt++;
-    if(type == 's') sem_post(&sem);
-    else filter_unlock(&filter, i);
+        if(type == 's') sem_post(&sem);
+        else filter_unlock(&filter, i);
+    }
     return NULL;
 }
 
