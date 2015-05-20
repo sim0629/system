@@ -25,7 +25,7 @@ mutually exclusive하게 shared variable을
 Semaphore lock은 POSIX semaphore의 초기값을 1로 설정하여 사용하였다.
 
 n개의 threads가 하나의 integer variable을 공유하게 하고
-이 변수를 각 thread에서 1억 번씩 increment 하도록 하였다.
+이 변수를 각 thread에서 1000만 번씩 increment 하도록 하였다.
 이 때 lock을 사용하여 해당 변수를 한 번에 하나의 thread만
 참조할 수 있도록 하였다.
 이렇게 하면 해당 변수는 최종적으로 n억 번 증가하는 것이 보장된다.
@@ -40,27 +40,21 @@ type은 filter, sem 중 하나이며, n은 2, 4, 8 중 하나이다.
 Processor가 8개인 PC에서 실험하였다. (자세한 스펙은 부록 참조)
 `/usr/bin/time`을 사용하여 수행 시간(wall clock)을 측정하였다.
 
-원래 increment 횟수는 1000만 번이지만 1억 번으로 올렸다.
-그 이유는 횟수가 작으면 increment를 하는 시간이 짧아
-thread를 생성하고 join 하는 시간 등 다른 요인이 차지하는 비율이 커져서
-유의미한 비교를 하기 힘들기 때문이다.
-
 ## 결과
 
-각각의 경우에 대하여 5번 시행한 뒤
-최저와 최고를 제외한 절사평균이며,
-단위는 초(s)이다. (자세한 결과는 부록 참조)
+각각의 경우에 대하여 5번 시행하였으며,
+단위는 초(s)이고 95% 신뢰도이다. (자세한 결과는 부록 참조)
 
-| n | filter | sem.   |
-|---|--------|--------|
-| 2 |   0.69 |   0.69 |
-| 4 |   1.42 |   1.39 |
-| 8 |   3.45 |   2.77 |
+| n | filter         | semaphore      |
+|---|----------------|----------------|
+| 2 |   4.78(+-2.54) |   4.38(+-0.32) |
+| 4 |  35.33(+-2.70) |  17.21(+-1.24) |
+| 8 | 207.50(+-3.26) |  30.78(+-1.80) |
 
-* Threads가 두 개일 때에는 filter lock과 semaphore lock의 성능 차이가 보이지 않았다.
-* Threads가 네 개일 때에는 큰 차이는 아니지만 filter lock이 semaphore lock 보다 약 2% 정도 느렸다.
-* Threads가 여덟 개일 때에는 filter lock이 semaphore lock에 비해 약 28%나 느렸다.
-* 전체적으로 보았을 때 filter lock이 semaphore lock 보다 느림을 알 수 있다.
+* Threads가 두 개일 때에는 filter lock과 semaphore lock의 유의미한 성능 차이가 보이지 않았다.
+* Threads가 네 개일 때에는 filter lock이 semaphore lock 보다 약 105% 정도 느렸다.
+* Threads가 여덟 개일 때에는 filter lock이 semaphore lock에 비해 약 574%나 느렸다.
+* 전체적으로 보았을 때 threads 개수가 많아질수록 filter lock이 semaphore lock 보다 느려짐을 알 수 있다.
 
 ## 부록
 
@@ -78,118 +72,121 @@ cpu MHz         : 2199.998
 (생략)
 ```
 
-### 실험 결과 전체
+### 실험 결과
 
 ```bash
-$ /usr/bin/time -f "%E" ./run filter 2
-cnt = 200000000
-0:00.69
-$ /usr/bin/time -f "%E" ./run filter 2
-cnt = 200000000
-0:00.69
-$ /usr/bin/time -f "%E" ./run filter 2
-cnt = 200000000
-0:00.69
-$ /usr/bin/time -f "%E" ./run filter 2
-cnt = 200000000
-0:00.70
-$ /usr/bin/time -f "%E" ./run filter 2
-cnt = 200000000
-0:00.69
+$ make test
+(생략)
+type=filter n=2
+cnt = 20000000
+0:03.05
+type=filter n=4
+cnt = 40000000
+0:37.58
+type=filter n=8
+cnt = 80000000
+3:23.27
+type=sem n=2
+cnt = 20000000
+0:04.05
+type=sem n=4
+cnt = 40000000
+0:19.32
+type=sem n=8
+cnt = 80000000
+0:30.40
 ```
 
 ```bash
-$ /usr/bin/time -f "%E" ./run sem 2
-cnt = 200000000
-0:00.69
-$ /usr/bin/time -f "%E" ./run sem 2
-cnt = 200000000
-0:00.69
-$ /usr/bin/time -f "%E" ./run sem 2
-cnt = 200000000
-0:00.69
-$ /usr/bin/time -f "%E" ./run sem 2
-cnt = 200000000
-0:00.69
-$ /usr/bin/time -f "%E" ./run sem 2
-cnt = 200000000
-0:00.69
+$ make test
+(생략)
+type=filter n=2
+cnt = 20000000
+0:05.03
+type=filter n=4
+cnt = 40000000
+0:36.58
+type=filter n=8
+cnt = 80000000
+3:32.09
+type=sem n=2
+cnt = 20000000
+0:04.18
+type=sem n=4
+cnt = 40000000
+0:17.92
+type=sem n=8
+cnt = 80000000
+0:28.85
 ```
 
 ```bash
-$ /usr/bin/time -f "%E" ./run filter 4
-cnt = 400000000
-0:01.40
-$ /usr/bin/time -f "%E" ./run filter 4
-cnt = 400000000
-0:01.44
-$ /usr/bin/time -f "%E" ./run filter 4
-cnt = 400000000
-0:01.44
-$ /usr/bin/time -f "%E" ./run filter 4
-cnt = 400000000
-0:01.41
-$ /usr/bin/time -f "%E" ./run filter 4
-cnt = 400000000
-0:01.41
+$ make test
+(생략)
+type=filter n=2
+cnt = 20000000
+0:03.04
+type=filter n=4
+cnt = 40000000
+0:35.78
+type=filter n=8
+cnt = 80000000
+3:30.42
+type=sem n=2
+cnt = 20000000
+0:04.14
+type=sem n=4
+cnt = 40000000
+0:15.83
+type=sem n=8
+cnt = 80000000
+0:34.21
 ```
 
 ```bash
-$ /usr/bin/time -f "%E" ./run sem 4
-cnt = 400000000
-0:01.39
-$ /usr/bin/time -f "%E" ./run sem 4
-cnt = 400000000
-0:01.39
-$ /usr/bin/time -f "%E" ./run sem 4
-cnt = 400000000
-0:01.39
-$ /usr/bin/time -f "%E" ./run sem 4
-cnt = 400000000
-0:01.39
-$ /usr/bin/time -f "%E" ./run sem 4
-cnt = 400000000
-0:01.39
+$ make test
+(생략)
+type=filter n=2
+cnt = 20000000
+0:09.72
+type=filter n=4
+cnt = 40000000
+0:36.77
+type=filter n=8
+cnt = 80000000
+3:24.75
+type=sem n=2
+cnt = 20000000
+0:04.62
+type=sem n=4
+cnt = 40000000
+0:16.25
+type=sem n=8
+cnt = 80000000
+0:29.70
 ```
 
 ```bash
-$ /usr/bin/time -f "%E" ./run filter 8
-cnt = 800000000
-0:03.46
-$ /usr/bin/time -f "%E" ./run filter 8
-cnt = 800000000
-0:03.75
-$ /usr/bin/time -f "%E" ./run filter 8
-cnt = 800000000
-0:03.14
-$ /usr/bin/time -f "%E" ./run filter 8
-cnt = 800000000
-0:02.97
-$ /usr/bin/time -f "%E" ./run filter 8
-cnt = 800000000
-0:03.75
-```
-
-```bash
-$ /usr/bin/time -f "%E" ./run sem 8
-cnt = 800000000
-0:02.77
-sem 8
-$ /usr/bin/time -f "%E" ./run sem 8
-cnt = 800000000
-0:02.77
-sem 8
-$ /usr/bin/time -f "%E" ./run sem 8
-cnt = 800000000
-0:02.77
-sem 8
-$ /usr/bin/time -f "%E" ./run sem 8
-cnt = 800000000
-0:02.77
-sem 8
-$ /usr/bin/time -f "%E" ./run sem 8
-cnt = 800000000
-0:02.78
+$ make test
+(생략)
+type=filter n=2
+cnt = 20000000
+0:03.05
+type=filter n=4
+cnt = 40000000
+0:29.94
+type=filter n=8
+cnt = 80000000
+3:26.97
+type=sem n=2
+cnt = 20000000
+0:04.91
+type=sem n=4
+cnt = 40000000
+0:16.73
+type=sem n=8
+cnt = 80000000
+0:30.72
 ```
 
 ### 코드
@@ -202,6 +199,12 @@ CFLAGS = -Wall -pthread
 
 lock: main.c filter.c
     $(CC) $(CFLAGS) -o run main.c filter.c
+
+test:
+    for type in "filter" "sem" ; do \
+        for n in 2 4 8 ; do \
+            /usr/bin/time -f "%E" ./run $type $n ; \
+        done ; \
 
 clean:
     rm -f run *.o
@@ -301,12 +304,13 @@ void parse_arguments(int argc, char *argv[]) {
 
 void *count(void *param) {
     unsigned int i = (unsigned int)(unsigned long long)param, c;
-    if(type == 's') sem_wait(&sem);
-    else filter_lock(&filter, i);
-    for(c = 0; c < MAX_CNT; c++)
+    for(c = 0; c < MAX_CNT; c++) {
+        if(type == 's') sem_wait(&sem);
+        else filter_lock(&filter, i);
         cnt++;
-    if(type == 's') sem_post(&sem);
-    else filter_unlock(&filter, i);
+        if(type == 's') sem_post(&sem);
+        else filter_unlock(&filter, i);
+    }
     return NULL;
 }
 
