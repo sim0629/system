@@ -1,68 +1,194 @@
-/* mm.c */
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
+#include <limits.h>
 
 #include "mm.h"
 #include "memlib.h"
 
 student_t student = {
-    /* full name */
     "심규민",
-    /* student ID */
     "2009-11744"
 };
 
-/* double word (8) alignment */
-#define ALIGNMENT 8
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
 
-/* rounds up to the nearest multiple of ALIGNMENT */
-#define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)
+#define BRK_OFFSET 4
+#define SBRK_ERROR ((void *)-1)
 
-/* aligned size of size_t */
-#define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
+#define USER_TO_KERNEL(ptr) ((void *)((char *)(ptr) - 4))
+#define KERNEL_TO_USER(block_ptr) ((void *)((char *)(block_ptr) + 4))
+#define BLOCK_SIZE(block_ptr) (*(size_t *)(block_ptr))
+#define SET_BLOCK_SIZE(block_ptr, block_size) (BLOCK_SIZE((char *)(block_ptr) + (block_size) - 4) = BLOCK_SIZE(block_ptr) = (block_size))
+#define IS_ALLOCATED(block_ptr) (BLOCK_SIZE(block_ptr) & 0x1)
+#define MARK_ALLOCATED(block_ptr) (BLOCK_SIZE(block_ptr) |= 0x1)
+#define MARK_NOT_ALLOCATED(block_ptr) (BLOCK_SIZE(block_ptr) &= ~0x1)
+#define NEXT_BLOCK(cur) (*(void **)((char *)(cur) + 4))
+#define PREV_BLOCK(cur) (*(void **)((char *)(cur) + 8))
 
-/* mm_init - initialize the malloc package. */
+static void *freeblock_root;
+
+static void insert_freeblock(void *block_ptr);
+static void remove_freeblock(void *block_ptr);
+
+static void *alloc_old_freeblock(size_t block_size);
+static void *alloc_new_freeblock(size_t block_size);
+
 int mm_init(void)
 {
+    void *p = mem_sbrk(BRK_OFFSET);
+
+    if(p == SBRK_ERROR)
+        return -1;
+
+    freeblock_root = NULL;
+
     return 0;
 }
 
-/* mm_malloc - Allocate a block by incrementing the brk pointer.
- * Always allocate a block whose size is a multiple of the alignment. */
 void *mm_malloc(size_t size)
 {
-    int newsize = ALIGN(size + SIZE_T_SIZE);
-    void *p = mem_sbrk(newsize);
-    if (p == (void *)-1)
+    size_t aligned_size = (size + 7) & ~0x7;
+    size_t block_size = aligned_size + 8;
+    void *block_ptr;
+
+    if(size == 0)
         return NULL;
-    else {
-        *(size_t *)p = size;
-        return (void *)((char *)p + SIZE_T_SIZE);
+
+    block_ptr = alloc_old_freeblock(block_size);
+    if(block_ptr == NULL)
+        return alloc_new_freeblock(block_size);
+    else
+        return block_ptr;
+}
+
+void mm_free(void *ptr)
+{
+    void *block_ptr = USER_TO_KERNEL(ptr);
+    MARK_NOT_ALLOCATED(block_ptr);
+    insert_freeblock(block_ptr);
+}
+
+void *mm_realloc(void *old_ptr, size_t new_size)
+{
+    void *new_ptr = mm_malloc(new_size);
+    size_t old_size = BLOCK_SIZE(USER_TO_KERNEL(old_ptr)) & ~0x1;
+
+    if(new_ptr != NULL)
+        memcpy(new_ptr, old_ptr, MIN(old_size, new_size));
+    mm_free(old_ptr);
+
+    return new_ptr;
+}
+
+static void insert_freeblock(void *block_ptr)
+{
+    void *cur = block_ptr;
+    size_t cur_size = BLOCK_SIZE(cur);
+    void *front, *back;
+
+    front = (void *)((char *)cur - 4);
+    if(front >= mem_heap_lo() + BRK_OFFSET) {
+        front = (void *)((char *)cur - BLOCK_SIZE(front));
+        if(IS_ALLOCATED(front)) {
+            front = NULL;
+        }
+    }else {
+        front = NULL;
+    }
+
+    back = (void *)((char *)cur + cur_size);
+    if(back <= mem_heap_hi()) {
+        if(IS_ALLOCATED(back)) {
+            back = NULL;
+        }
+    }else {
+        back = NULL;
+    }
+
+    if(front == NULL && back == NULL) {
+        NEXT_BLOCK(cur) = freeblock_root;
+        PREV_BLOCK(cur) = NULL;
+        if(freeblock_root != NULL)
+            PREV_BLOCK(freeblock_root) = cur;
+        freeblock_root = cur;
+    }else if(front == NULL && back != NULL) {
+        NEXT_BLOCK(cur) = NEXT_BLOCK(back);
+        PREV_BLOCK(cur) = PREV_BLOCK(back);
+        if(NEXT_BLOCK(cur) != NULL)
+            PREV_BLOCK(NEXT_BLOCK(cur)) = cur;
+        if(PREV_BLOCK(cur) != NULL)
+            NEXT_BLOCK(PREV_BLOCK(cur)) = cur;
+        else
+            freeblock_root = cur;
+        SET_BLOCK_SIZE(cur, cur_size + BLOCK_SIZE(back));
+    }else if(front != NULL && back == NULL) {
+        SET_BLOCK_SIZE(front, BLOCK_SIZE(front) + cur_size);
+    }else if(front != NULL && back != NULL) {
+        SET_BLOCK_SIZE(front, BLOCK_SIZE(front) + cur_size + BLOCK_SIZE(back));
+        remove_freeblock(back);
+    }else {
+        assert(0); // unreachable
     }
 }
 
-/* mm_free - Freeing a block does nothing. */
-void mm_free(void *ptr)
+static void remove_freeblock(void *block_ptr)
 {
+    void *next = NEXT_BLOCK(block_ptr);
+    void *prev = PREV_BLOCK(block_ptr);
+
+    if(prev == NULL)
+        freeblock_root = next;
+    else
+        NEXT_BLOCK(prev) = next;
+
+    if(next != NULL)
+        PREV_BLOCK(next) = prev;
 }
 
-/* mm_realloc - Implemented simply in terms of mm_malloc and mm_free. */
-void *mm_realloc(void *ptr, size_t size)
+static void *alloc_old_freeblock(size_t block_size)
 {
-    void *oldptr = ptr;
-    void *newptr;
-    size_t copySize;
+    void *best = NULL, *cur = freeblock_root;
+    size_t best_size = UINT_MAX;
+    size_t diff_size;
 
-    newptr = mm_malloc(size);
-    if (newptr == NULL)
+    while(cur != NULL) {
+        size_t cur_size = BLOCK_SIZE(cur);
+        if(cur_size >= block_size && cur_size < best_size) {
+            best_size = cur_size;
+            best = cur;
+        }
+        cur = NEXT_BLOCK(cur);
+    }
+
+    if(best == NULL)
         return NULL;
-    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
-    if (size < copySize)
-        copySize = size;
-    memcpy(newptr, oldptr, copySize);
-    mm_free(oldptr);
-    return newptr;
+
+    diff_size = best_size - block_size;
+
+    if(diff_size < 16) {
+        remove_freeblock(best);
+        MARK_ALLOCATED(best);
+        return KERNEL_TO_USER(best);
+    }
+
+    SET_BLOCK_SIZE(best, diff_size);
+    best = (void *)((char *)best + diff_size);
+    SET_BLOCK_SIZE(best, block_size);
+    MARK_ALLOCATED(best);
+    return KERNEL_TO_USER(best);
+}
+
+static void *alloc_new_freeblock(size_t block_size)
+{
+    void *block_ptr = mem_sbrk(block_size);
+
+    if(block_ptr == SBRK_ERROR)
+        return NULL;
+
+    SET_BLOCK_SIZE(block_ptr, block_size);
+    MARK_ALLOCATED(block_ptr);
+    return KERNEL_TO_USER(block_ptr);
 }
