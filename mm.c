@@ -24,9 +24,9 @@
  ********************************************************/
 student_t student = {
     /* full name */
-    "Alice",
+    "심규민",
     /* student ID */
-    "2015-12345"
+    "2009-11744"
 };
 
 /* single word (4) or double word (8) alignment */
