@@ -36,6 +36,8 @@ static void remove_freeblock(void *block_ptr);
 static void *alloc_old_freeblock(size_t block_size);
 static void *alloc_new_freeblock(size_t block_size);
 
+static int mm_check(void);
+
 int mm_init(void)
 {
     void *p = mem_sbrk(BRK_OFFSET);
@@ -48,7 +50,7 @@ int mm_init(void)
     return 0;
 }
 
-void *mm_malloc(size_t size)
+static void *mm_malloc_inner(size_t size)
 {
     size_t aligned_size = (size + 7) & ~0x7;
     size_t block_size = aligned_size + 8;
@@ -63,15 +65,32 @@ void *mm_malloc(size_t size)
     else
         return block_ptr;
 }
+void *mm_malloc(size_t size)
+{
+    void *ret = mm_malloc_inner(size);
+#ifdef CHECK
+    printf("=== malloc %u ===\n", size);
+    assert(mm_check());
+#endif
+    return ret;
+}
 
-void mm_free(void *ptr)
+static void mm_free_inner(void *ptr)
 {
     void *block_ptr = USER_TO_KERNEL(ptr);
     MARK_NOT_ALLOCATED(block_ptr);
     insert_freeblock(block_ptr);
 }
+void mm_free(void *ptr)
+{
+    mm_free_inner(ptr);
+#ifdef CHECK
+    printf("=== free %p ===\n", ptr);
+    assert(mm_check());
+#endif
+}
 
-void *mm_realloc(void *old_ptr, size_t new_size)
+static void *mm_realloc_inner(void *old_ptr, size_t new_size)
 {
     void *new_ptr = mm_malloc(new_size);
     size_t old_size = BLOCK_SIZE(USER_TO_KERNEL(old_ptr)) & ~0x1;
@@ -81,6 +100,15 @@ void *mm_realloc(void *old_ptr, size_t new_size)
     mm_free(old_ptr);
 
     return new_ptr;
+}
+void *mm_realloc(void *old_ptr, size_t new_size)
+{
+    void *ret = mm_realloc_inner(old_ptr, new_size);
+#ifdef CHECK
+    printf("=== realloc %p %u ===\n", old_ptr, new_size);
+    assert(mm_check());
+#endif
+    return ret;
 }
 
 static void insert_freeblock(void *block_ptr)
@@ -191,4 +219,16 @@ static void *alloc_new_freeblock(size_t block_size)
     SET_BLOCK_SIZE(block_ptr, block_size);
     MARK_ALLOCATED(block_ptr);
     return KERNEL_TO_USER(block_ptr);
+}
+
+static int mm_check()
+{
+    void *block_ptr = (void *)((char *)mem_heap_lo() + 4);
+    while(block_ptr <= mem_heap_hi()) {
+        size_t block_size = BLOCK_SIZE(block_ptr) & ~0x1;
+        int is_allocated = IS_ALLOCATED(block_ptr);
+        printf("size: %u, alloc: %d\n", block_size, is_allocated);
+        block_ptr = (void *)((char *)block_ptr + block_size);
+    }
+    return 1;
 }
