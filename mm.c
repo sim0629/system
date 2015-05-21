@@ -21,12 +21,16 @@ student_t student = {
 #define USER_TO_KERNEL(ptr) ((void *)((char *)(ptr) - 4))
 #define KERNEL_TO_USER(block_ptr) ((void *)((char *)(block_ptr) + 4))
 #define BLOCK_SIZE(block_ptr) (*(size_t *)(block_ptr))
-#define SET_BLOCK_SIZE(block_ptr, block_size) (BLOCK_SIZE((char *)(block_ptr) + (block_size) - 4) = BLOCK_SIZE(block_ptr) = (block_size))
 #define IS_ALLOCATED(block_ptr) (BLOCK_SIZE(block_ptr) & 0x1)
 #define MARK_ALLOCATED(block_ptr) (BLOCK_SIZE(block_ptr) |= 0x1)
 #define MARK_NOT_ALLOCATED(block_ptr) (BLOCK_SIZE(block_ptr) &= ~0x1)
 #define NEXT_BLOCK(cur) (*(void **)((char *)(cur) + 4))
 #define PREV_BLOCK(cur) (*(void **)((char *)(cur) + 8))
+
+static inline void set_block_size(void *block_ptr, size_t block_size) {
+    BLOCK_SIZE((char *)block_ptr + block_size - 4) = block_size;
+    BLOCK_SIZE(block_ptr) = block_size;
+}
 
 static void *freeblock_root;
 
@@ -151,11 +155,11 @@ static void insert_freeblock(void *block_ptr)
             NEXT_BLOCK(PREV_BLOCK(cur)) = cur;
         else
             freeblock_root = cur;
-        SET_BLOCK_SIZE(cur, cur_size + BLOCK_SIZE(back));
+        set_block_size(cur, cur_size + BLOCK_SIZE(back));
     }else if(front != NULL && back == NULL) {
-        SET_BLOCK_SIZE(front, BLOCK_SIZE(front) + cur_size);
+        set_block_size(front, BLOCK_SIZE(front) + cur_size);
     }else if(front != NULL && back != NULL) {
-        SET_BLOCK_SIZE(front, BLOCK_SIZE(front) + cur_size + BLOCK_SIZE(back));
+        set_block_size(front, BLOCK_SIZE(front) + cur_size + BLOCK_SIZE(back));
         remove_freeblock(back);
     }else {
         assert(0); // unreachable
@@ -202,9 +206,9 @@ static void *alloc_old_freeblock(size_t block_size)
         return KERNEL_TO_USER(best);
     }
 
-    SET_BLOCK_SIZE(best, diff_size);
+    set_block_size(best, diff_size);
     best = (void *)((char *)best + diff_size);
-    SET_BLOCK_SIZE(best, block_size);
+    set_block_size(best, block_size);
     MARK_ALLOCATED(best);
     return KERNEL_TO_USER(best);
 }
@@ -216,7 +220,7 @@ static void *alloc_new_freeblock(size_t block_size)
     if(block_ptr == SBRK_ERROR)
         return NULL;
 
-    SET_BLOCK_SIZE(block_ptr, block_size);
+    set_block_size(block_ptr, block_size);
     MARK_ALLOCATED(block_ptr);
     return KERNEL_TO_USER(block_ptr);
 }
