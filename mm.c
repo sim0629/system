@@ -24,21 +24,34 @@ student_t student = {
 #define IS_ALLOCATED(block_ptr) (BLOCK_SIZE(block_ptr) & 0x1)
 #define MARK_ALLOCATED(block_ptr) (BLOCK_SIZE(block_ptr) |= 0x1)
 #define MARK_NOT_ALLOCATED(block_ptr) (BLOCK_SIZE(block_ptr) &= ~0x1)
-#define NEXT_BLOCK(cur) (*(void **)((char *)(cur) + 4))
-#define PREV_BLOCK(cur) (*(void **)((char *)(cur) + 8))
+#define LEFT_BLOCK(cur) (*(void **)((char *)(cur) + 4))
+#define RIGHT_BLOCK(cur) (*(void **)((char *)(cur) + 8))
+typedef enum { LEFT = 4, RIGHT = 8 } child_t;
+#define CHILD_BLOCK(cur, child) (*(void **)((char *)(cur) + (int)(child)))
+
+static void *freeblock_root;
+
+static void insert_freeblock(void *block_ptr);
+static void remove_freeblock(void *block_ptr);
+static void *parent_freeblock(void *block_ptr, child_t *lr_out);
+
+static void *alloc_old_freeblock(size_t block_size);
+static void *alloc_new_freeblock(size_t block_size);
 
 static inline void set_block_size(void *block_ptr, size_t block_size) {
     BLOCK_SIZE((char *)block_ptr + block_size - 4) = block_size;
     BLOCK_SIZE(block_ptr) = block_size;
 }
 
-static void *freeblock_root;
+static inline void set_child_of_parent(void *block_ptr, void *child) {
+    child_t lr;
+    void *parent = parent_freeblock(block_ptr, &lr);
 
-static void insert_freeblock(void *block_ptr);
-static void remove_freeblock(void *block_ptr);
-
-static void *alloc_old_freeblock(size_t block_size);
-static void *alloc_new_freeblock(size_t block_size);
+    if(parent == NULL)
+        freeblock_root = child;
+    else
+        CHILD_BLOCK(parent, lr) = child;
+}
 
 static int mm_check(void);
 
@@ -83,8 +96,42 @@ void *mm_malloc(size_t size)
 static void mm_free_inner(void *ptr)
 {
     void *block_ptr = USER_TO_KERNEL(ptr);
+    void *cur, *front, *back;
+
     MARK_NOT_ALLOCATED(block_ptr);
-    insert_freeblock(block_ptr);
+    cur = block_ptr;
+
+    front = (void *)((char *)cur - 4);
+    if(front >= mem_heap_lo() + BRK_OFFSET) {
+        front = (void *)((char *)cur - BLOCK_SIZE(front));
+        if(IS_ALLOCATED(front)) {
+            front = NULL;
+        }
+    }else {
+        front = NULL;
+    }
+
+    back = (void *)((char *)cur + BLOCK_SIZE(cur));
+    if(back <= mem_heap_hi()) {
+        if(IS_ALLOCATED(back)) {
+            back = NULL;
+        }
+    }else {
+        back = NULL;
+    }
+
+    if(front != NULL) {
+        remove_freeblock(front);
+        set_block_size(front, BLOCK_SIZE(front) + BLOCK_SIZE(cur));
+        cur = front;
+    }
+
+    if(back != NULL) {
+        remove_freeblock(back);
+        set_block_size(cur, BLOCK_SIZE(cur) + BLOCK_SIZE(back));
+    }
+
+    insert_freeblock(cur);
 }
 void mm_free(void *ptr)
 {
@@ -118,96 +165,148 @@ void *mm_realloc(void *old_ptr, size_t new_size)
 
 static void insert_freeblock(void *block_ptr)
 {
-    void *cur = block_ptr;
-    size_t cur_size = BLOCK_SIZE(cur);
-    void *front, *back;
+    size_t size = BLOCK_SIZE(block_ptr);
+    void *p = freeblock_root;
 
-    front = (void *)((char *)cur - 4);
-    if(front >= mem_heap_lo() + BRK_OFFSET) {
-        front = (void *)((char *)cur - BLOCK_SIZE(front));
-        if(IS_ALLOCATED(front)) {
-            front = NULL;
-        }
-    }else {
-        front = NULL;
+    LEFT_BLOCK(block_ptr) = NULL;
+    RIGHT_BLOCK(block_ptr) = NULL;
+
+    if(p == NULL) {
+        freeblock_root = block_ptr;
+        return;
     }
 
-    back = (void *)((char *)cur + cur_size);
-    if(back <= mem_heap_hi()) {
-        if(IS_ALLOCATED(back)) {
-            back = NULL;
+    while(1) {
+        void *q;
+        if(size < BLOCK_SIZE(p)) {
+            q = LEFT_BLOCK(p);
+            if(q == NULL) {
+                LEFT_BLOCK(p) = block_ptr;
+                return;
+            }
+        }else {
+            q = RIGHT_BLOCK(p);
+            if(q == NULL) {
+                RIGHT_BLOCK(p) = block_ptr;
+                return;
+            }
         }
-    }else {
-        back = NULL;
-    }
-
-    if(front == NULL && back == NULL) {
-        NEXT_BLOCK(cur) = freeblock_root;
-        PREV_BLOCK(cur) = NULL;
-        if(freeblock_root != NULL)
-            PREV_BLOCK(freeblock_root) = cur;
-        freeblock_root = cur;
-    }else if(front == NULL && back != NULL) {
-        NEXT_BLOCK(cur) = NEXT_BLOCK(back);
-        PREV_BLOCK(cur) = PREV_BLOCK(back);
-        if(NEXT_BLOCK(cur) != NULL)
-            PREV_BLOCK(NEXT_BLOCK(cur)) = cur;
-        if(PREV_BLOCK(cur) != NULL)
-            NEXT_BLOCK(PREV_BLOCK(cur)) = cur;
-        else
-            freeblock_root = cur;
-        set_block_size(cur, cur_size + BLOCK_SIZE(back));
-    }else if(front != NULL && back == NULL) {
-        set_block_size(front, BLOCK_SIZE(front) + cur_size);
-    }else if(front != NULL && back != NULL) {
-        set_block_size(front, BLOCK_SIZE(front) + cur_size + BLOCK_SIZE(back));
-        remove_freeblock(back);
-    }else {
-        assert(0); // unreachable
+        p = q;
     }
 }
 
 static void remove_freeblock(void *block_ptr)
 {
-    void *next = NEXT_BLOCK(block_ptr);
-    void *prev = PREV_BLOCK(block_ptr);
+    void *left = LEFT_BLOCK(block_ptr);
+    void *right = RIGHT_BLOCK(block_ptr);
+    void *target;
 
-    if(prev == NULL)
-        freeblock_root = next;
-    else
-        NEXT_BLOCK(prev) = next;
+    if(left == NULL && right == NULL) {
+        target = NULL;
+    }else if(left == NULL && right != NULL) {
+        target = right;
+    }else if(left != NULL && right == NULL) {
+        target = left;
+    }else {
+        void *p = right;
+        while(1) {
+            void *q = LEFT_BLOCK(p);
+            if(q == NULL)
+                break;
+            p = q;
+        }
+        if(p == right) {
+            LEFT_BLOCK(p) = left;
+        }else {
+            set_child_of_parent(p, RIGHT_BLOCK(p));
+            LEFT_BLOCK(p) = left;
+            RIGHT_BLOCK(p) = right;
+        }
+        target = p;
+    }
+    set_child_of_parent(block_ptr, target);
+}
 
-    if(next != NULL)
-        PREV_BLOCK(next) = prev;
+static void *parent_freeblock(void *block_ptr, child_t *lr_out)
+{
+    size_t size = BLOCK_SIZE(block_ptr);
+    void *p = freeblock_root;
+
+    if(block_ptr == freeblock_root)
+        return NULL;
+
+    while(p != NULL) {
+        void *q;
+        if(size < BLOCK_SIZE(p)) {
+            q = LEFT_BLOCK(p);
+            if(q == block_ptr) {
+                if(lr_out != NULL)
+                    *lr_out = LEFT;
+                break;
+            }
+        }else {
+            q = RIGHT_BLOCK(p);
+            if(q == block_ptr) {
+                if(lr_out != NULL)
+                    *lr_out = RIGHT;
+                break;
+            }
+        }
+        p = q;
+    }
+
+    return p;
 }
 
 static void *alloc_old_freeblock(size_t block_size)
 {
-    void *best = NULL, *cur = freeblock_root;
-    size_t best_size = UINT_MAX;
     size_t diff_size;
+    void *p = freeblock_root, *best = NULL;
 
-    while(cur != NULL) {
-        size_t cur_size = BLOCK_SIZE(cur);
-        if(cur_size >= block_size && cur_size < best_size) {
-            best_size = cur_size;
-            best = cur;
+    while(p != NULL) {
+        void *q;
+        if(block_size < BLOCK_SIZE(p)) {
+            q = LEFT_BLOCK(p);
+            if(q == NULL) {
+                best = p;
+                break;
+            }
+        }else if(block_size > BLOCK_SIZE(p)) {
+            q = RIGHT_BLOCK(p);
+            if(q == NULL) {
+                child_t lr;
+                q = p;
+                while(1) {
+                    q = parent_freeblock(q, &lr);
+                    if(q == NULL)
+                        break;
+                    if(lr == LEFT) {
+                        best = q;
+                        break;
+                    }
+                }
+                break;
+            }
+        }else {
+            best = p;
+            break;
         }
-        cur = NEXT_BLOCK(cur);
+        p = q;
     }
 
     if(best == NULL)
         return NULL;
 
-    diff_size = best_size - block_size;
-
+    remove_freeblock(best);
+    diff_size = BLOCK_SIZE(best) - block_size;
     if(diff_size < 16) {
-        remove_freeblock(best);
         MARK_ALLOCATED(best);
         return KERNEL_TO_USER(best);
     }
 
     set_block_size(best, diff_size);
+    insert_freeblock(best);
+
     best = (void *)((char *)best + diff_size);
     set_block_size(best, block_size);
     MARK_ALLOCATED(best);
