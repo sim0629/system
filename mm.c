@@ -50,6 +50,7 @@ int mm_init(void)
         return -1;
 
     freeblock_root = NULL;
+    assert(mm_check());
 
     return 0;
 }
