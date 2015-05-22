@@ -325,14 +325,26 @@ static void *alloc_new_freeblock(size_t block_size)
     return KERNEL_TO_USER(block_ptr);
 }
 
+static size_t traversal(void *block_ptr)
+{
+    size_t left_cnt, right_cnt;
+    if(block_ptr == NULL) return 0;
+    left_cnt = traversal(LEFT_BLOCK(block_ptr));
+    printf("ptr: %p, size: %u\n", block_ptr, BLOCK_SIZE(block_ptr));
+    right_cnt = traversal(RIGHT_BLOCK(block_ptr));
+    return left_cnt + 1 + right_cnt;
+}
+
 static int mm_check()
 {
     void *block_ptr = (void *)((char *)mem_heap_lo() + 4);
+    size_t freeblock_cnt = 0;
     while(block_ptr <= mem_heap_hi()) {
         size_t block_size = BLOCK_SIZE(block_ptr) & ~0x1;
         int is_allocated = IS_ALLOCATED(block_ptr);
+        if(!is_allocated) freeblock_cnt++;
         printf("size: %u, alloc: %d\n", block_size, is_allocated);
         block_ptr = (void *)((char *)block_ptr + block_size);
     }
-    return 1;
+    return traversal(freeblock_root) == freeblock_cnt;
 }
