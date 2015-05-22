@@ -208,17 +208,18 @@ static void remove_freeblock(void *block_ptr)
     }else if(left != NULL && right == NULL) {
         target = left;
     }else {
-        void *p = right;
+        void *p = right, *pp = right;
         while(1) {
             void *q = LEFT_BLOCK(p);
             if(q == NULL)
                 break;
+            pp = p;
             p = q;
         }
         if(p == right) {
             LEFT_BLOCK(p) = left;
         }else {
-            set_child_of_parent(p, RIGHT_BLOCK(p));
+            LEFT_BLOCK(pp) = RIGHT_BLOCK(p);
             LEFT_BLOCK(p) = left;
             RIGHT_BLOCK(p) = right;
         }
