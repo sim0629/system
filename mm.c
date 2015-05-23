@@ -32,6 +32,7 @@ student_t student = {
 static void *freeblock_base;
 static void *freeblock_root;
 
+static void splay_freeblock(void *block_ptr);
 static void insert_freeblock(void *block_ptr);
 static void remove_freeblock(void *block_ptr);
 static void *find_freeblock(size_t block_size);
@@ -245,6 +246,70 @@ void *mm_realloc(void *ptr, size_t size)
     return ret;
 }
 
+static void splay_freeblock(void *x)
+{
+    void *p, *g;
+    int x_lr, p_lr, g_lr;
+
+    if(x == NIL)
+        return;
+
+    x_lr = LEFT_OR_RIGHT(x);
+    p = PARENT(x);
+
+    if(p == NIL)
+        return;
+
+    p_lr = LEFT_OR_RIGHT(p);
+    g = PARENT(p);
+
+    if(g == NIL) {
+        // zig
+        if(x_lr == LEFT) {
+            set_link(p, RIGHT_CHILD(x), LEFT);
+            set_link(x, p, RIGHT);
+        }else {
+            set_link(p, LEFT_CHILD(x), RIGHT);
+            set_link(x, p, LEFT);
+        }
+        set_link(NIL, x, LR_WHATEVER);
+        return;
+    }
+
+    g_lr = LEFT_OR_RIGHT(g);
+    set_link(PARENT(g), x, g_lr);
+
+    if(x_lr == p_lr) {
+        // zig-zig
+        if(x_lr == LEFT) {
+            set_link(g, RIGHT_CHILD(p), LEFT);
+            set_link(p, RIGHT_CHILD(x), LEFT);
+            set_link(x, p, RIGHT);
+            set_link(p, g, RIGHT);
+        }else {
+            set_link(g, LEFT_CHILD(p), RIGHT);
+            set_link(p, LEFT_CHILD(x), RIGHT);
+            set_link(x, p, LEFT);
+            set_link(p, g, LEFT);
+        }
+    }else {
+        // zig-zag
+        if(x_lr == LEFT) {
+            set_link(p, RIGHT_CHILD(x), LEFT);
+            set_link(g, LEFT_CHILD(x), RIGHT);
+            set_link(x, p, RIGHT);
+            set_link(x, g, LEFT);
+        }else {
+            set_link(p, LEFT_CHILD(x), RIGHT);
+            set_link(g, RIGHT_CHILD(x), LEFT);
+            set_link(x, p, LEFT);
+            set_link(x, g, RIGHT);
+        }
+    }
+
+    splay_freeblock(x);
+}
+
 static void insert_freeblock(void *block_ptr)
 {
     size_t block_size = BLOCK_SIZE(block_ptr);
@@ -273,6 +338,8 @@ static void insert_freeblock(void *block_ptr)
     }
 
     set_link(p, block_ptr, lr);
+
+    splay_freeblock(block_ptr);
 }
 
 static void remove_freeblock(void *block_ptr)
@@ -309,13 +376,16 @@ static void remove_freeblock(void *block_ptr)
     }
 
     set_link(parent, target, lr);
+
+    splay_freeblock(parent);
 }
 
 static void *find_freeblock(size_t block_size)
 {
-    void *p = freeblock_root, *fit = NIL;
+    void *p = freeblock_root, *fit = NIL, *pp = NIL;
 
     while(p != NIL) {
+        pp = p;
         if(block_size <= BLOCK_SIZE(p))
             fit = p;
         if(block_size < BLOCK_SIZE(p)) {
@@ -324,6 +394,8 @@ static void *find_freeblock(size_t block_size)
             p = RIGHT_CHILD(p);
         }
     }
+
+    splay_freeblock(pp);
 
     return fit;
 }
