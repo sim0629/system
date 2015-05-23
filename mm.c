@@ -38,8 +38,6 @@ static void remove_freeblock(void *block_ptr);
 static void *find_freeblock(size_t block_size);
 static void *coalesce_freeblock(void *block_ptr);
 
-#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
-
 #define BRK_OFFSET 4
 #define SBRK_ERROR ((void *)-1)
 
@@ -217,16 +215,67 @@ void mm_free(void *ptr)
 #endif
 }
 
-static void *mm_realloc_(void *old_ptr, size_t new_size)
+static void *mm_realloc_(void *ptr, size_t size)
 {
-    void *new_ptr = mm_malloc_(new_size);
-    size_t old_size = BLOCK_SIZE(USER_TO_KERNEL(old_ptr)) - BOUNDARY_SIZE;
+    size_t aligned_size = ALIGNED_SIZE(size);
+    void *block_ptr = USER_TO_KERNEL(ptr), *new_block_ptr;
+    size_t block_size = BLOCK_SIZE(block_ptr);
 
-    if(new_ptr != NULL)
-        memcpy(new_ptr, old_ptr, MIN(old_size, new_size));
-    mm_free_(old_ptr);
+    if(aligned_size <= block_size) {
+        // shrink
+        if(aligned_size + MIN_BLOCK_SIZE <= block_size) {
+            new_block_ptr = SHIFT(block_ptr, aligned_size);
+            SET_BLOCK_SIZE(block_ptr, aligned_size);
+            SET_IS_ALLOCATED(block_ptr, ALLOCATED);
+            SET_BLOCK_SIZE(new_block_ptr, block_size - aligned_size);
+            SET_IS_ALLOCATED(new_block_ptr, FREED);
+            insert_freeblock(new_block_ptr);
+        }
+    }else {
+        // expand
+        size_t prev_size = 0, next_size = 0, total_size;
+        if(block_ptr > freeblock_base && PREV_IS_ALLOCATED(block_ptr) == FREED)
+            prev_size = PREV_BLOCK_SIZE(block_ptr);
+        if(NEXT_BLOCK(block_ptr) <= mem_heap_hi() && NEXT_IS_ALLOCATED(block_ptr) == FREED)
+            next_size = NEXT_BLOCK_SIZE(block_ptr);
+        total_size = prev_size + block_size + next_size;
+        if(aligned_size <= total_size) {
+            // in-place
+            if(next_size > 0) {
+                void *next = NEXT_BLOCK(block_ptr);
+                remove_freeblock(next);
+            }
+            if(prev_size > 0) {
+                void *prev = PREV_BLOCK(block_ptr);
+                remove_freeblock(prev);
+                memmove(KERNEL_TO_USER(prev), ptr, block_size - BOUNDARY_SIZE);
+                block_ptr = prev;
+            }
+            if(aligned_size + MIN_BLOCK_SIZE <= total_size) {
+                new_block_ptr = SHIFT(block_ptr, aligned_size);
+                SET_BLOCK_SIZE(block_ptr, aligned_size);
+                SET_IS_ALLOCATED(block_ptr, ALLOCATED);
+                SET_BLOCK_SIZE(new_block_ptr, total_size - aligned_size);
+                SET_IS_ALLOCATED(new_block_ptr, FREED);
+                insert_freeblock(new_block_ptr);
+            }else {
+                SET_BLOCK_SIZE(block_ptr, total_size);
+                SET_IS_ALLOCATED(block_ptr, ALLOCATED);
+            }
+        }else {
+            // out-place
+            void *new_ptr = mm_malloc_(size);
+            if(new_ptr != NULL) {
+                memcpy(new_ptr, ptr, block_size - BOUNDARY_SIZE);
+                block_ptr = USER_TO_KERNEL(new_ptr);
+            }
+            mm_free_(ptr);
+            if(new_ptr == NULL)
+                return NULL;
+        }
+    }
 
-    return new_ptr;
+    return KERNEL_TO_USER(block_ptr);
 }
 void *mm_realloc(void *ptr, size_t size)
 {
