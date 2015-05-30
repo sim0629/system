@@ -11,10 +11,30 @@
 
 #include "csapp.h"
 
+struct conn_info
+{
+    int fd;
+    rio_t rio;
+    struct sockaddr_in addr;
+    socklen_t addr_len;
+};
+
 /*
  * Function prototypes
  */
 static void print_log_entry(struct sockaddr_in *sockaddr, char *uri, int size);
+
+static int proxy_accept(int listen_fd, struct conn_info *conn_info_ptr)
+{
+    conn_info_ptr->addr_len = sizeof(conn_info_ptr->addr);
+    conn_info_ptr->fd = accept(listen_fd, (SA *)&conn_info_ptr->addr, &conn_info_ptr->addr_len);
+    if (conn_info_ptr->fd < 0) {
+        fprintf(stderr, "Fail to accept\n");
+        return -1;
+    }
+    rio_readinitb(&conn_info_ptr->rio, conn_info_ptr->fd);
+    return 0;
+}
 
 static void proxy_listen_forever(int port)
 {
@@ -26,6 +46,9 @@ static void proxy_listen_forever(int port)
     }
 
     while (1) {
+        struct conn_info conn_info;
+        if (proxy_accept(listen_fd, &conn_info) < 0)
+            continue;
         // TODO
     }
 }
