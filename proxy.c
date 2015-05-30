@@ -21,6 +21,12 @@ struct conn_info
     socklen_t addr_len;
 };
 
+struct client_info
+{
+    int fd;
+    rio_t rio;
+};
+
 struct http_header
 {
     char first_line[MAXLINE];
@@ -131,11 +137,32 @@ static int proxy_parse_response_header(rio_t *rio_ptr, struct http_header *heade
     return proxy_parse_http_header(rio_ptr, header_ptr);
 }
 
+static int proxy_connect(struct client_info *client_info_ptr, struct http_header *header_ptr)
+{
+    int port = 80;
+
+    if (header_ptr->port != NULL)
+        port = atoi(header_ptr->port);
+
+    if ((client_info_ptr->fd = open_clientfd(header_ptr->host, port)) < 0) {
+        fprintf(stderr, "Fail to connect\n");
+        return -1;
+    }
+    rio_readinitb(&client_info_ptr->rio, client_info_ptr->fd);
+    return 0;
+}
+
 static void proxy_relay(struct conn_info *conn_info_ptr)
 {
     struct http_header request_header;
+    struct client_info client_info;
 
     if (proxy_parse_request_header(&conn_info_ptr->rio, &request_header) < 0) {
+        close(conn_info_ptr->fd);
+        return;
+    }
+
+    if (proxy_connect(&client_info, &request_header) < 0) {
         close(conn_info_ptr->fd);
         return;
     }
