@@ -14,7 +14,7 @@
 /*
  * Function prototypes
  */
-void format_log_entry(char *logstring, struct sockaddr_in *sockaddr, char *uri, int size);
+static void print_log_entry(struct sockaddr_in *sockaddr, char *uri, int size);
 
 /*
  * main - Main routine for the proxy program
@@ -31,18 +31,21 @@ int main(int argc, char **argv)
 }
 
 /*
- * format_log_entry - Create a formatted log entry in logstring.
+ * print_log_entry - Print a formatted log entry in log file.
  *
  * The inputs are the socket address of the requesting client
  * (sockaddr), the URI from the request (uri), and the size in bytes
  * of the response from the server (size).
  */
-void format_log_entry(char *logstring, struct sockaddr_in *sockaddr, char *uri, int size)
+static void print_log_entry(struct sockaddr_in *sockaddr, char *uri, int size)
 {
     time_t now;
     char time_str[MAXLINE];
     unsigned long host;
     unsigned char a, b, c, d;
+
+    const char *filename = "proxy.log";
+    FILE *fp;
 
     /* Get a formatted time string */
     now = time(NULL);
@@ -60,6 +63,12 @@ void format_log_entry(char *logstring, struct sockaddr_in *sockaddr, char *uri, 
     c = (host >> 8) & 0xff;
     d = host & 0xff;
 
-    /* Return the formatted log entry string */
-    sprintf(logstring, "%s: %d.%d.%d.%d %s", time_str, a, b, c, d, uri);
+    /* Print the formatted log entry string */
+    fp = fopen(filename, "a");
+    if (fp == NULL) {
+        fprintf(stderr, "Can not open file %s\n", filename);
+        return;
+    }
+    fprintf(fp, "%s: %d.%d.%d.%d %s %d\n", time_str, a, b, c, d, uri, size);
+    fclose(fp);
 }
