@@ -2,7 +2,7 @@
  * proxy.c - CS:APP Web proxy
  *
  * Student Information:
- *     Alice, 2015-12345
+ * 심규민, 2009-11744
  *
  * IMPORTANT: Give a high level description of your code here. You
  * must also provide a header comment at the beginning of each
