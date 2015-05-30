@@ -41,6 +41,8 @@ int main(int argc, char **argv)
         exit(0);
     }
 
+    signal(SIGPIPE, SIG_IGN);
+
     proxy_listen_forever(atoi(argv[1]));
     exit(0);
 }
