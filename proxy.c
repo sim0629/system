@@ -174,84 +174,78 @@ static void proxy_relay(struct conn_info *conn_info_ptr)
 {
     struct client_info client_info;
 
-    client_info.fd = -1;
+    struct http_header request_header;
+    struct http_header response_header;
+    char line[MAXLINE];
+    int line_len;
+    int recv_size = 0;
 
-    while (1) {
-        struct http_header request_header;
-        struct http_header response_header;
-        char line[MAXLINE];
-        int line_len;
-        int recv_size = 0;
-
-        if (proxy_parse_request_header(&conn_info_ptr->rio, &request_header) < 0) {
-            close(conn_info_ptr->fd);
-            return;
-        }
-
-        if (client_info.fd < 0) {
-            if (proxy_connect(&client_info, &request_header) < 0) {
-                close(conn_info_ptr->fd);
-                return;
-            }
-        }
-
-        line_len = sprintf(line, "%s /%s %s", request_header.method, request_header.path, request_header.version);
-        if (rio_writen(client_info.fd, line, line_len) <= 0)
-            goto proxy_relay_end;
-        if (rio_writen(client_info.fd, request_header.buf, request_header.buf_length) <= 0)
-            goto proxy_relay_end;
-        if (request_header.content_length == CHUNKED) {
-            while (1) {
-                line_len = rio_readlineb(&conn_info_ptr->rio, line, MAXLINE);
-                if (line_len <= 0)
-                    goto proxy_relay_end;
-                if (rio_writen(client_info.fd, line, line_len) <= 0)
-                    goto proxy_relay_end;
-                if (strncmp(line, "\r\n", 2) == 0)
-                    break;
-                line_len = (int)strtol(line, NULL, 16);
-                if (proxy_toss(&conn_info_ptr->rio, client_info.fd, line_len) < 0)
-                    goto proxy_relay_end;
-            }
-        }else if (request_header.content_length > 0) {
-            if (proxy_toss(&conn_info_ptr->rio, client_info.fd, request_header.content_length) < 0)
-                goto proxy_relay_end;
-        }
-
-        if (proxy_parse_response_header(&client_info.rio, &response_header) < 0)
-            goto proxy_relay_end;
-
-        line_len = strlen(response_header.first_line);
-        recv_size += line_len;
-        if (rio_writen(conn_info_ptr->fd, response_header.first_line, line_len) <= 0)
-            goto proxy_relay_end;
-        recv_size += response_header.buf_length;
-        if (rio_writen(conn_info_ptr->fd, response_header.buf, response_header.buf_length) <= 0)
-            goto proxy_relay_end;
-        if (response_header.content_length == CHUNKED) {
-            while (1) {
-                line_len = rio_readlineb(&client_info.rio, line, MAXLINE);
-                if (line_len <= 0)
-                    goto proxy_relay_end;
-                recv_size += line_len;
-                if (rio_writen(conn_info_ptr->fd, line, line_len) <= 0)
-                    goto proxy_relay_end;
-                if (strncmp(line, "\r\n", 2) == 0)
-                    break;
-                line_len = (int)strtol(line, NULL, 16);
-                recv_size += line_len;
-                if (proxy_toss(&client_info.rio, conn_info_ptr->fd, line_len) < 0)
-                    goto proxy_relay_end;
-            }
-        }else if (response_header.content_length > 0) {
-            line_len += request_header.content_length;
-            if (proxy_toss(&client_info.rio, conn_info_ptr->fd, response_header.content_length) < 0)
-                goto proxy_relay_end;
-        }
-
-        sprintf(line, "http://%s/%s", request_header.host, request_header.path);
-        print_log_entry(&conn_info_ptr->addr, line, recv_size);
+    if (proxy_parse_request_header(&conn_info_ptr->rio, &request_header) < 0) {
+        close(conn_info_ptr->fd);
+        return;
     }
+
+    if (proxy_connect(&client_info, &request_header) < 0) {
+        close(conn_info_ptr->fd);
+        return;
+    }
+
+    line_len = sprintf(line, "%s /%s %s", request_header.method, request_header.path, request_header.version);
+    if (rio_writen(client_info.fd, line, line_len) <= 0)
+        goto proxy_relay_end;
+    if (rio_writen(client_info.fd, request_header.buf, request_header.buf_length) <= 0)
+        goto proxy_relay_end;
+    if (request_header.content_length == CHUNKED) {
+        while (1) {
+            line_len = rio_readlineb(&conn_info_ptr->rio, line, MAXLINE);
+            if (line_len <= 0)
+                goto proxy_relay_end;
+            if (rio_writen(client_info.fd, line, line_len) <= 0)
+                goto proxy_relay_end;
+            line_len = (int)strtol(line, NULL, 16) + 2;
+            if (proxy_toss(&conn_info_ptr->rio, client_info.fd, line_len) < 0)
+                goto proxy_relay_end;
+            if (line_len == 2)
+                break;
+        }
+    }else if (request_header.content_length > 0) {
+        if (proxy_toss(&conn_info_ptr->rio, client_info.fd, request_header.content_length) < 0)
+            goto proxy_relay_end;
+    }
+
+    if (proxy_parse_response_header(&client_info.rio, &response_header) < 0)
+        goto proxy_relay_end;
+
+    line_len = strlen(response_header.first_line);
+    recv_size += line_len;
+    if (rio_writen(conn_info_ptr->fd, response_header.first_line, line_len) <= 0)
+        goto proxy_relay_end;
+    recv_size += response_header.buf_length;
+    if (rio_writen(conn_info_ptr->fd, response_header.buf, response_header.buf_length) <= 0)
+        goto proxy_relay_end;
+    if (response_header.content_length == CHUNKED) {
+        while (1) {
+            line_len = rio_readlineb(&client_info.rio, line, MAXLINE);
+            if (line_len <= 0)
+                goto proxy_relay_end;
+            recv_size += line_len;
+            if (rio_writen(conn_info_ptr->fd, line, line_len) <= 0)
+                goto proxy_relay_end;
+            line_len = (int)strtol(line, NULL, 16) + 2;
+            recv_size += line_len;
+            if (proxy_toss(&client_info.rio, conn_info_ptr->fd, line_len) < 0)
+                goto proxy_relay_end;
+            if (line_len == 2)
+                break;
+        }
+    }else if (response_header.content_length > 0) {
+        line_len += request_header.content_length;
+        if (proxy_toss(&client_info.rio, conn_info_ptr->fd, response_header.content_length) < 0)
+            goto proxy_relay_end;
+    }
+
+    sprintf(line, "http://%s/%s", request_header.host, request_header.path);
+    print_log_entry(&conn_info_ptr->addr, line, recv_size);
 
 proxy_relay_end:
     close(client_info.fd);
