@@ -14,7 +14,6 @@
 /*
  * Function prototypes
  */
-int parse_uri(char *uri, char *target_addr, char *path, int *port);
 void format_log_entry(char *logstring, struct sockaddr_in *sockaddr, char *uri, int size);
 
 /*
@@ -29,51 +28,6 @@ int main(int argc, char **argv)
     }
 
     exit(0);
-}
-
-/*
- * parse_uri - URI parser
- *
- * Given a URI from an HTTP proxy GET request (i.e., a URL), extract
- * the host name, path name, and port.  The memory for hostname and
- * pathname must already be allocated and should be at least MAXLINE
- * bytes. Return -1 if there are any problems.
- */
-int parse_uri(char *uri, char *hostname, char *pathname, int *port)
-{
-    char *hostbegin;
-    char *hostend;
-    char *pathbegin;
-    int len;
-
-    if (strncasecmp(uri, "http://", 7) != 0) {
-        hostname[0] = '\0';
-        return -1;
-    }
-
-    /* Extract the host name */
-    hostbegin = uri + 7;
-    hostend = strpbrk(hostbegin, " :/\r\n\0");
-    len = hostend - hostbegin;
-    strncpy(hostname, hostbegin, len);
-    hostname[len] = '\0';
-
-    /* Extract the port number */
-    *port = 80; /* default */
-    if (*hostend == ':')
-        *port = atoi(hostend + 1);
-
-    /* Extract the path */
-    pathbegin = strchr(hostbegin, '/');
-    if (pathbegin == NULL) {
-        pathname[0] = '\0';
-    }
-    else {
-        pathbegin++;	
-        strcpy(pathname, pathbegin);
-    }
-
-    return 0;
 }
 
 /*
