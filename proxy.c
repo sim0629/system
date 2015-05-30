@@ -16,6 +16,20 @@
  */
 static void print_log_entry(struct sockaddr_in *sockaddr, char *uri, int size);
 
+static void proxy_listen_forever(int port)
+{
+    int listen_fd;
+
+    if ((listen_fd = open_listenfd(port)) < 0) {
+        fprintf(stderr, "Can not listen on port %d\n", port);
+        exit(1);
+    }
+
+    while (1) {
+        // TODO
+    }
+}
+
 /*
  * main - Main routine for the proxy program
  */
@@ -27,6 +41,7 @@ int main(int argc, char **argv)
         exit(0);
     }
 
+    proxy_listen_forever(atoi(argv[1]));
     exit(0);
 }
 
