@@ -6,6 +6,8 @@
  *
  *  1. 주어진 command line argument로부터 port 번호를 파싱하고 listen 합니다.
  *  2. 브라우져를 accept 하여 그 정보를 conn_info에 저장합니다.
+ *     별도의 thread를 만들어 3.-11.을 concurrent 하게 실행합니다.
+ *     2.를 반복합니다.
  *  3. 브라우져의 요청을 빈 줄이 나올 때까지 한 줄씩 읽으며 파싱하여
  *     header_info에 저장합니다.
  *  4. 요청 맨 첫 줄을 파싱하여 웹서버의 주소를 알아냅니다.
@@ -18,7 +20,7 @@
  *  9. 응답 header를 브라우져에 전달합니다.
  * 10. 응답 header에서 chunked encoding인지 아닌지에 따라 content length만큼
  *     body를 읽어서 브라우져에 전달합니다.
- * 11. 양쪽의 연결을 끊고 2.부터 반복합니다.
+ * 11. 양쪽의 연결을 끊습니다.
  */
 
 #include "csapp.h"
@@ -65,6 +67,7 @@ struct http_header
  * Function prototypes
  */
 static void print_log_entry(struct sockaddr_in *sockaddr, char *uri, int size);
+static int open_clientfd_mt(char *hostname, int port);
 
 /*
  * listen_fd에서 socket을 accept 하여 conn_info를 채웁니다.
@@ -192,7 +195,7 @@ static int proxy_connect(struct client_info *client_info_ptr,
     if (header_ptr->port != NULL)
         port = atoi(header_ptr->port);
 
-    if ((client_info_ptr->fd = open_clientfd(header_ptr->host, port)) < 0) {
+    if ((client_info_ptr->fd = open_clientfd_mt(header_ptr->host, port)) < 0) {
         fprintf(stderr, "Fail to connect\n");
         return -1;
     }
@@ -326,7 +329,19 @@ proxy_relay_end:
 }
 
 /*
+ * proxy_relay를 concurrent 하게 부르기 위한 thread function 입니다.
+ */
+static void *proxy_relay_thread(void *param)
+{
+    struct conn_info *conn_info_ptr = (struct conn_info *)param;
+    proxy_relay(conn_info_ptr);
+    free(conn_info_ptr);
+    return NULL;
+}
+
+/*
  * 주어진 port에서 무한히 listen 하며 accept, relay 합니다.
+ * accept는 synchronous 하게 하고 relay는 concurrent 하게 합니다.
  * listen에 실패하면 프로세스를 종료합니다.
  */
 static void proxy_listen_forever(int port)
@@ -339,10 +354,17 @@ static void proxy_listen_forever(int port)
     }
 
     while (1) {
-        struct conn_info conn_info;
-        if (proxy_accept(listen_fd, &conn_info) < 0)
+        pthread_t thread;
+        struct conn_info *conn_info_ptr = malloc(sizeof(struct conn_info));
+        if (proxy_accept(listen_fd, conn_info_ptr) < 0)
             continue;
-        proxy_relay(&conn_info);
+        pthread_create(&thread, NULL, proxy_relay_thread, conn_info_ptr);
+        if (thread < 0) {
+            close(conn_info_ptr->fd);
+            free(conn_info_ptr);
+            continue;
+        }
+        pthread_detach(thread);
     }
 }
 
@@ -397,12 +419,29 @@ static void print_log_entry(struct sockaddr_in *sockaddr, char *uri, int size)
     c = (host >> 8) & 0xff;
     d = host & 0xff;
 
+    static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_lock(&print_mutex);
     /* Print the formatted log entry string */
     fp = fopen(filename, "a");
     if (fp == NULL) {
         fprintf(stderr, "Can not open file %s\n", filename);
-        return;
+        goto print_log_entry_done;
     }
     fprintf(fp, "%s: %d.%d.%d.%d %s %d\n", time_str, a, b, c, d, uri, size);
     fclose(fp);
+print_log_entry_done:
+    pthread_mutex_unlock(&print_mutex);
+}
+
+/*
+ * open_clientfd에 mutual exclusion을 적용한 wrapper 입니다.
+ */
+int open_clientfd_mt(char *hostname, int port)
+{
+    int clientfd;
+    static pthread_mutex_t clientfd_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_lock(&clientfd_mutex);
+    clientfd = open_clientfd(hostname, port);
+    pthread_mutex_unlock(&clientfd_mutex);
+    return clientfd;
 }
